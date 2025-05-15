@@ -18,7 +18,8 @@ contract ERC721DropTest is TestHelper {
                 args.allowList[i] != address(0) &&
                     args.allowList[i] != args.feeRecipient &&
                     args.allowList[i] != creator &&
-                    args.allowList[i] != args.minter
+                    args.allowList[i] != args.minter &&
+                    args.allowList[i].code.length == 0 // to fix foundry error
             );
         }
         _;
