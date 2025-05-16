@@ -205,10 +205,7 @@ function mintPublic(address minter,uint256 quantity)
 ### 3.4 アップグレード設計
 
 - Subject: 非アップグレード（immutable）
-- Imprint: UUPS Proxy
-  - upgradeAuthority = TimeLock(48h)
-  - storage gap 50 slots 予約
-  - `onlyProxy` modifier を公開 upgrade 関数に付与
+- Imprint: Transparent Proxy
 
 ### 3.5 SubjectへのImrpintからの反映.
 

@@ -4,20 +4,32 @@ pragma solidity ^0.8.17;
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
 import { Imprint } from "../../src-upgradeable/src/Imprint.sol";
-import { ERC1967Proxy } from "openzeppelin-contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { TransparentUpgradeableProxy } from
+    "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from
+    "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
 import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
-
 import {
     IERC721Receiver
 } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 
+contract ImprintV2 is Imprint {
+    function version() external pure returns (string memory) {
+        return "v2";
+    }
+}
+
+
+
 contract ImprintTest is TestHelper, IERC721Receiver {
     Imprint imprint;
+    ProxyAdmin proxyAdmin;
     address user = address(0x123);
 
     address[] allowedSeaDrop;
 
     function setUp() public {
+        proxyAdmin = new ProxyAdmin();
         Imprint implementation = new Imprint();
 
         allowedSeaDrop    = new address[](1);
@@ -27,10 +39,16 @@ contract ImprintTest is TestHelper, IERC721Receiver {
             Imprint.initializeImprint.selector,
             "WorldCanonImprint",
             "WCIMP",
-            allowedSeaDrop
+            allowedSeaDrop,
+            address(this)
         );
 
-        ERC1967Proxy proxy = new ERC1967Proxy(address(implementation), data);
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(
+                address(implementation),
+                address(proxyAdmin),
+                data
+            );
 
         imprint = Imprint(address(proxy));
 
@@ -86,6 +104,59 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     ) external pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
+
+    /* --------------------- Transparent Proxy 特有テスト ------------------- */
+
+    /// admin はロジック関数を呼べない（fallback 分岐）
+    function testAdminCannotFallback() public {
+        vm.prank(address(proxyAdmin));
+        vm.expectRevert(
+            "TransparentUpgradeableProxy: admin cannot fallback to proxy target"
+        );
+        Imprint(address(imprint)).totalSupply();
+    }
+
+    /// non-owner は onlyOwner を実行できない
+    function testOnlyOwnerGuard() public {
+        vm.prank(user);
+        vm.expectRevert(bytes4(keccak256("OnlyOwner()")) );
+        imprint.setMaxSupply(2000);
+    }
+    
+    /* ----------------------------- UPGRADE TEST --------------------------- */
+
+    /* ───────── upgrade 前後の state 保持 ───────── */
+    function testUpgradeByAdmin() public {
+        /* 0) 事前に 2 枚ミントして state を作る */
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 2);
+        assertEq(imprint.totalSupply(), 2);
+
+        /* 1) 新実装 */
+        ImprintV2 newImpl = new ImprintV2();
+
+        /* 2) 非 admin で失敗 */
+        vm.prank(user);
+        vm.expectRevert("Ownable: caller is not the owner");
+        proxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(address(imprint))),
+            address(newImpl)
+        );
+
+        /* 3) admin で成功 */
+        vm.prank(proxyAdmin.owner());
+        proxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(address(imprint))),
+            address(newImpl)
+        );
+
+        /* 4) state 保持 + 新機能 */
+        assertEq(ImprintV2(address(imprint)).totalSupply(), 2);
+        assertEq(ImprintV2(address(imprint)).version(), "v2");
+    }
+
+
+
 
 
     // function testMintInitialSetsSubjectMeta() public {

@@ -51,7 +51,7 @@ contract Imprint is ERC721SeaDropUpgradeable {
         // Initialize ERC721SeaDrop with name, symbol, and allowed SeaDrop
         __ERC721SeaDrop_init(name, symbol, allowedSeaDrop);
 
-        // // Initialize SVG pointers
+        // Initialize SVG pointers
         svgPrefixPtr = SSTORE2.write(SVG_PREFIX);
         svgSuffixPtr = SSTORE2.write(SVG_SUFFIX);
     }
@@ -59,10 +59,15 @@ contract Imprint is ERC721SeaDropUpgradeable {
     function initializeImprint(
         string memory name,
         string memory symbol,
-        address[] memory allowedSeaDrop
+        address[] memory allowedSeaDrop,
+        address initialOwner
     ) external initializer initializerERC721A {
         __Imprint_init(name, symbol, allowedSeaDrop);
+        require(initialOwner != address(0), "owner = zero address");
+        _transferOwnership(initialOwner);   // OwnableUpgradeable
     }
+
+    uint256[50] private __gap;
 
     /**
      * @notice A token can only be burned by the set burn address.
@@ -88,5 +93,5 @@ contract Imprint is ERC721SeaDropUpgradeable {
         }
 
         _burn(tokenId);
-    }
+    }    
 }
