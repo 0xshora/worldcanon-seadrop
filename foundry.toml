@@ -9,7 +9,7 @@ remappings = [
     'seadrop/=src/',
 ]
 optimizer_runs = 1_000_000
-# via_ir = true
+via_ir = true
 ignored_error_codes = []
 bytecode_hash = "none"
 

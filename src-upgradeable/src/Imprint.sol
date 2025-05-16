@@ -6,20 +6,63 @@ import { SSTORE2 } from "../lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 import {Base64}  from "openzeppelin-contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
+/// ──────────────────────────────────────────────────────────────
+///  ImprintStorage  ── World Canon / Imprint  固定ストレージ
+/// ──────────────────────────────────────────────────────────────
 library ImprintStorage {
-    struct TokenMeta {
-        uint64  editionNo;
-        string  model;        // 例 "GPT-4o"
-        string  subjectName;  // 例 "Happiness"
+    /*═════════ ① 不変データ構造 ═════════*/
+
+    /// Edition 毎のヘッダー
+    struct EditionHeader {
+        uint64  editionNo;   // 連番（＝キー）
+        string  model;       // 例 "GPT-4o"
+        uint64  timestamp;   // block.timestamp (UTC 秒)
+        bool    isSealed;      // true なら Seed 追加不可
     }
 
-    struct Layout {
-        mapping(uint256 => address)  descPtr; // tokenId → SSTORE2 pointer
-        mapping(uint256 => TokenMeta) meta;   // tokenId → metadata
+    /// SeaDrop ミント前にプレ登録する “Seed”
+    struct ImprintSeed {
+        uint64   editionNo;      // 紐づく Edition
+        uint16   localIndex;     // Edition 内 index
+        uint256  subjectId;      // Subject tokenId
+        string   subjectName;    // Subject 名
+        address  descPtr;        // SSTORE2 ポインタ
+        bool     claimed;        // mint 済みか
     }
+
+    /// Mint 後、Subject 側から呼ばれるときに使う最終メタ
+    struct TokenMeta {
+        uint64  editionNo;
+        uint16  localIndex;      // Edition 内 index
+        string  model;
+        string  subjectName;
+    }
+
+    /*═════════ ② Diamond-Layout ═════════*/
+
+    struct Layout {
+        /* --- Finalised Imprint (tokenId 同値) --- */
+        mapping(uint256 => address)     descPtr;   // slot offset 0
+        mapping(uint256 => TokenMeta)   meta;      // slot offset 1
+
+        /* --- Edition & Seed --- */
+        mapping(uint64  => EditionHeader) editionHeaders;   // slot offset 2
+        mapping(uint256 => ImprintSeed)   seeds;            // slot offset 3
+        uint256  nextSeedId;                                // slot offset 4
+
+        /* --- Globals --- */
+        address  worldCanon;   // Subject コントラクト (set once)
+        uint64   maxSupply;    // 0 = unlimited
+    }
+
+    /*═════════ ③ 取得ヘルパ ═════════*/
+
+    bytes32 internal constant STORAGE_SLOT =
+        keccak256("worldcanon.imprint.storage.v0");
+
     function layout() internal pure returns (Layout storage l) {
-        bytes32 s = keccak256("worldcanon.imprint.storage.v0");
-        assembly { l.slot := s }
+        bytes32 slot = STORAGE_SLOT;
+        assembly { l.slot := slot }
     }
 }
 
@@ -77,12 +120,13 @@ contract Imprint is ERC721SeaDropUpgradeable {
     function _adminSetMeta(
         uint256 tokenId,
         uint64  editionNo,
+        uint16  localIndex,
         string calldata model,
         string calldata subjectName
     ) external onlyOwner {
         require(_exists(tokenId), "nonexistent");
         ImprintStorage.layout().meta[tokenId] =
-            ImprintStorage.TokenMeta(editionNo, model, subjectName);
+            ImprintStorage.TokenMeta(editionNo, localIndex, model, subjectName);
     }
 
     /*═══════════════════════ Metadata helpers ═══════════════════════*/
@@ -127,6 +171,7 @@ contract Imprint is ERC721SeaDropUpgradeable {
             ' (', m.model, ')"',
             ',"attributes":['
                 '{"trait_type":"Edition","value":"', Strings.toString(m.editionNo), '"},'
+                '{"trait_type":"Local Index","value":"', Strings.toString(m.localIndex), '"},'
                 '{"trait_type":"Model","value":"', m.model, '"},'
                 '{"trait_type":"Subject","value":"', m.subjectName, '"}'
             '],"image":"data:image/svg+xml;base64,', svgB64, '"}'

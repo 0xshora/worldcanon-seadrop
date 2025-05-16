@@ -218,7 +218,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
 
         // set meta
-        imprint._adminSetMeta(1, 1, "GPT-4o", "SubjectX");
+        imprint._adminSetMeta(1, 1, 1, "GPT-4o", "SubjectX");
 
         string memory uri = imprint.tokenURI(1);
         assertTrue(_startsWith(uri, "data:application/json;base64,"));
