@@ -50,6 +50,13 @@ library ImprintStorage {
         mapping(uint256 => ImprintSeed)   seeds;            // slot offset 3
         uint256  nextSeedId;                                // slot offset 4
 
+        /* --- Sale --- */
+        uint64  activeEdition;       // 現在販売中の Edition
+        uint256 activeCursor;        // その Edition 内で次に配布する seedId
+        mapping(uint64 => uint256) firstSeedId;   // editionNo -> 先頭 seedId
+        mapping(uint64 => uint256) lastSeedId;    // editionNo -> 末尾 seedId
+        mapping(uint64 => mapping(uint16 => bool)) localIndexTaken;
+
         /* --- Globals --- */
         address  worldCanon;   // Subject コントラクト (set once)
         uint64   maxSupply;    // 0 = unlimited
@@ -66,6 +73,14 @@ library ImprintStorage {
     }
 }
 
+/// @dev owner が Seed を一括登録するときに使う入力フォーマット
+struct SeedInput {
+    uint64  editionNo;      // 紐づく Edition
+    uint16  localIndex;     // Edition 内の連番
+    uint256 subjectId;      // Subject tokenId（まだ使わなければ 0 でも可）
+    string  subjectName;    // 表示用名
+    bytes   desc;           // SVG 本文（UTF-8）最大 280Byte 推奨
+}
 
 /*
  * @notice This contract uses ERC721SeaDrop,
@@ -90,6 +105,9 @@ contract Imprint is ERC721SeaDropUpgradeable {
     /* ──────────────── events ──────────────── */
     event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
     event EditionSealed(uint64 indexed editionNo);
+    event SeedsAdded(uint64 indexed editionNo, uint256 count);
+    event ImprintClaimed(uint256 indexed seedId, uint256 indexed tokenId, address indexed to);
+    event ActiveEditionChanged(uint64 indexed newEdition);
 
     /* ──────────────── init ──────────────── */
     function __Imprint_init(
@@ -150,6 +168,117 @@ contract Imprint is ERC721SeaDropUpgradeable {
         require(!h.isSealed,        "already sealed");
         h.isSealed = true;
         emit EditionSealed(editionNo);
+    }
+
+    function addSeeds(SeedInput[] calldata inputs) external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        uint256 n = inputs.length;
+        require(n > 0, "empty");
+
+        uint64 batchEdition = inputs[0].editionNo;
+
+        for (uint256 i; i < n; ++i) {
+            SeedInput calldata sIn = inputs[i];
+            require(sIn.editionNo == batchEdition, "mixed edition");
+            require(sIn.desc.length != 0, "desc empty");
+
+            ImprintStorage.EditionHeader storage hdr =
+                st.editionHeaders[sIn.editionNo];
+            require(hdr.editionNo != 0,  "edition missing");
+            require(!hdr.isSealed,       "edition sealed");
+
+            require(
+                !st.localIndexTaken[sIn.editionNo][sIn.localIndex],
+                "dup localIdx"
+            );
+            st.localIndexTaken[sIn.editionNo][sIn.localIndex] = true;
+
+            uint256 newId = ++st.nextSeedId;
+            st.seeds[newId] = ImprintStorage.ImprintSeed({
+                editionNo:   sIn.editionNo,
+                localIndex:  sIn.localIndex,
+                subjectId:   sIn.subjectId,
+                subjectName: sIn.subjectName,
+                descPtr:     SSTORE2.write(sIn.desc),
+                claimed:     false
+            });
+
+            if (st.firstSeedId[sIn.editionNo] == 0) {
+                st.firstSeedId[sIn.editionNo] = newId;
+            }
+            st.lastSeedId[sIn.editionNo] = newId;
+        }
+
+        emit SeedsAdded(batchEdition, n);
+    }
+
+
+    // ──────────────────────────────────────────────
+    //  2) Edition 切替
+    // ──────────────────────────────────────────────
+    function setActiveEdition(uint64 editionNo) external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        ImprintStorage.EditionHeader storage h = st.editionHeaders[editionNo];
+        require(h.editionNo != 0,  "edition missing");
+        require(h.isSealed,        "edition not sealed");
+        require(st.firstSeedId[editionNo] != 0, "no seeds");
+
+        st.activeEdition = editionNo;
+        // 次 mint する seed を先頭にリセット
+        st.activeCursor  = st.firstSeedId[editionNo];
+        emit ActiveEditionChanged(editionNo);
+    }
+
+    // ──────────────────────────────────────────────
+    //  3) SeaDrop からの Mint → Seed Claim
+    // ──────────────────────────────────────────────
+    function mintSeaDrop(address to, uint256 quantity)
+        external
+        override
+        nonReentrant
+    {
+        _onlyAllowedSeaDrop(msg.sender);
+
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        uint64 ed = st.activeEdition;
+        require(ed != 0, "no active edition");
+
+        uint256 cursor = st.activeCursor;
+        uint256 last   = st.lastSeedId[ed];
+        require(cursor != 0 && cursor + quantity - 1 <= last, "sold out");
+
+        uint256 firstTokenId = _nextTokenId();
+
+        // Extra safety check to ensure the max supply is not exceeded.
+        if (_totalMinted() + quantity > maxSupply()) {
+            revert MintQuantityExceedsMaxSupply(
+                _totalMinted() + quantity,
+                maxSupply()
+            );
+        }
+
+        _safeMint(to, quantity);                        // ERC721A が連番で発行
+
+        for (uint256 i; i < quantity; ++i) {
+            uint256 seedId  = cursor + i;
+            uint256 tokenId = firstTokenId + i;
+
+            ImprintStorage.ImprintSeed storage s = st.seeds[seedId];
+            s.claimed = true;
+
+            // 書き込み
+            st.descPtr[tokenId] = s.descPtr;
+            st.meta[tokenId] = ImprintStorage.TokenMeta({
+                editionNo:   s.editionNo,
+                localIndex:  s.localIndex,
+                model:       st.editionHeaders[ed].model,
+                subjectName: s.subjectName
+            });
+
+            emit ImprintClaimed(seedId, tokenId, to);
+        }
+
+        st.activeCursor = cursor + quantity;            // 次の Seed へ前進
     }
 
     /* ───────── setter(admin only, deprecated) ───────── */

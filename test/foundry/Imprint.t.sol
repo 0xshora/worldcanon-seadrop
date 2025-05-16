@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
-import { Imprint, ImprintStorage } from "../../src-upgradeable/src/Imprint.sol";
+import { Imprint, ImprintStorage, SeedInput } from "../../src-upgradeable/src/Imprint.sol";
 import { TransparentUpgradeableProxy } from
     "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from
@@ -12,6 +12,7 @@ import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradea
 import {
     IERC721Receiver
 } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import { Strings } from "openzeppelin-contracts/utils/Strings.sol";
 
 contract ImprintV2 is Imprint {
     function version() external pure returns (string memory) {
@@ -99,6 +100,30 @@ contract ImprintTest is TestHelper, IERC721Receiver {
             address(5),
             true
         );
+
+        /******************************************************************
+         * ↓↓↓   ここからテスト用の Edition / Seed セットアップ   ↓↓↓
+         ******************************************************************/
+
+        // ① Edition #1 を作成
+        imprint.createEdition(1, "GPT-4o");
+
+        // ② Seed を 3 つ登録（localIndex = 1,2,3）
+        SeedInput[] memory seeds = new SeedInput[](3);
+        for (uint16 i = 0; i < 3; ++i) {
+            seeds[i] = SeedInput({
+                editionNo:   1,
+                localIndex:  i + 1,          // 1,2,3
+                subjectId:   0,
+                subjectName: string(abi.encodePacked("Seed", Strings.toString(i+1))),
+                desc:        "<svg></svg>"
+            });
+        }
+        imprint.addSeeds(seeds);
+
+        // ③ Edition を Seal ＆ Active にする
+        imprint.sealEdition(1);
+        imprint.setActiveEdition(1);
     }
 
     function testInitializeSvgPointers() public view {
@@ -183,7 +208,13 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /* ✱ desc 未登録時は revert する */
     function testTokenImageRevertsWithoutDesc() public {
         vm.prank(allowedSeaDrop[0]);
-        imprint.mintSeaDrop(address(this), 1);          // tokenId = 1
+        imprint.mintSeaDrop(address(this), 1);   // tokenId = 1
+
+        // 強制的に descPtr を消す
+        bytes32 slot = keccak256("worldcanon.imprint.storage.v0");
+        bytes32 mapSlot = keccak256(abi.encode(uint256(1), uint256(slot))); // descPtr mapping のキー
+        vm.store(address(imprint), mapSlot, bytes32(uint256(0)));
+
         vm.expectRevert("desc missing");
         imprint.tokenImage(1);
     }
@@ -234,8 +265,8 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     /* ❶ createEdition() がヘッダーを作成してイベントを Emit */
     function testCreateEditionHeader() public {
-        uint64 ed = 1;
-        string memory model = "GPT-4o";
+        uint64 ed = 99;
+        string memory model = "GPT-UnitTest";
 
         /* --- イベント期待値 --- */
         vm.expectEmit(true /*indexed*/, false, false, true);
@@ -357,7 +388,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     function testMintSeaDropAsAllowed() public {
         vm.prank(allowedSeaDrop[0]);                 // SeaDrop からの呼び出しを偽装
-        imprint.mintSeaDrop(address(this), 2);       // 2 枚ミント（ID 1,2）
+        imprint.mintSeaDrop(address(this), 2);       // activeEdition=1 に対して 2 枚ミント
         assertEq(imprint.totalSupply(), 2);
         assertEq(imprint.ownerOf(1), address(this));
         assertEq(imprint.ownerOf(2), address(this));
