@@ -87,6 +87,11 @@ contract Imprint is ERC721SeaDropUpgradeable {
     address public svgPrefixPtr;
     address public svgSuffixPtr;
 
+    /* ──────────────── events ──────────────── */
+    event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
+    event EditionSealed(uint64 indexed editionNo);
+
+    /* ──────────────── init ──────────────── */
     function __Imprint_init(
         string memory name,
         string memory symbol,
@@ -114,6 +119,37 @@ contract Imprint is ERC721SeaDropUpgradeable {
         __Imprint_init(name, symbol, allowedSeaDrop);
         require(initialOwner != address(0), "owner = zero address");
         _transferOwnership(initialOwner);   // OwnableUpgradeable
+    }
+
+    /*═══════════════════════  Edition  API  ══════════════════════*/
+    /// @notice 新しい Edition を作成する。owner 専用。
+    function createEdition(uint64 editionNo, string calldata model)
+        external
+        onlyOwner
+    {
+        require(editionNo != 0,               "editionNo=0");
+        require(bytes(model).length != 0,     "model empty");
+
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        // 未使用かチェック（editionNo は一意）
+        require(st.editionHeaders[editionNo].editionNo == 0, "edition exists");
+        st.editionHeaders[editionNo] = ImprintStorage.EditionHeader({
+            editionNo:  editionNo,
+            model:      model,
+            timestamp:  uint64(block.timestamp),
+            isSealed:   false
+        });
+        emit EditionCreated(editionNo, model, uint64(block.timestamp));
+    }
+
+    /// @notice 既存 Edition を封鎖（Seed 追加を禁止）する。owner 専用。
+    function sealEdition(uint64 editionNo) external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        ImprintStorage.EditionHeader storage h = st.editionHeaders[editionNo];
+        require(h.editionNo != 0,   "unknown edition");
+        require(!h.isSealed,        "already sealed");
+        h.isSealed = true;
+        emit EditionSealed(editionNo);
     }
 
     /* ───────── setter(admin only, deprecated) ───────── */
@@ -179,6 +215,15 @@ contract Imprint is ERC721SeaDropUpgradeable {
         return string(
             abi.encodePacked("data:application/json;base64,", Base64.encode(json))
         );
+    }
+
+    /*─────────────── Edition header view ───────────────*/
+    function getEditionHeader(uint64 editionNo)
+        external
+        view
+        returns (ImprintStorage.EditionHeader memory)
+    {
+        return ImprintStorage.layout().editionHeaders[editionNo];
     }
 
     uint256[50] private __gap;

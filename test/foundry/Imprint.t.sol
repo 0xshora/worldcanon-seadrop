@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
-import { Imprint } from "../../src-upgradeable/src/Imprint.sol";
+import { Imprint, ImprintStorage } from "../../src-upgradeable/src/Imprint.sol";
 import { TransparentUpgradeableProxy } from
     "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from
@@ -222,6 +222,61 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
         string memory uri = imprint.tokenURI(1);
         assertTrue(_startsWith(uri, "data:application/json;base64,"));
+    }
+
+    /*───────────────────────────────────────────────────────────────*/
+    /*                     Edition Header まわりのテスト              */
+    /*───────────────────────────────────────────────────────────────*/
+
+    /* イベント定義（Imprint と同一シグネチャ） */
+    event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
+    event EditionSealed(uint64 indexed editionNo);
+
+    /* ❶ createEdition() がヘッダーを作成してイベントを Emit */
+    function testCreateEditionHeader() public {
+        uint64 ed = 1;
+        string memory model = "GPT-4o";
+
+        /* --- イベント期待値 --- */
+        vm.expectEmit(true /*indexed*/, false, false, true);
+        emit EditionCreated(ed, model, uint64(block.timestamp));
+
+        imprint.createEdition(ed, model);
+
+        /* --- ストレージ検証 --- */
+        ImprintStorage.EditionHeader memory h = imprint.getEditionHeader(ed);
+
+        assertEq(h.editionNo, ed);
+        assertEq(h.model, model);
+        assertTrue(h.timestamp >= uint64(block.timestamp) && h.timestamp <= uint64(block.timestamp) + 1);
+        assertFalse(h.isSealed);
+
+        /* --- 二重作成は revert --- */
+        vm.expectRevert("edition exists");
+        imprint.createEdition(ed, model);
+    }
+
+    /* ❷ sealEdition() が isSealed を true にし、イベントを Emit */
+    function testSealEdition() public {
+        imprint.createEdition(2, "Claude-3.7");
+
+        vm.expectEmit(true, false, false, true);
+        emit EditionSealed(2);
+        imprint.sealEdition(2);
+
+        ImprintStorage.EditionHeader memory h = imprint.getEditionHeader(2);
+
+        assertTrue(h.isSealed);
+
+        /* --- 既に sealed 済みの Edition を再度 seal すると revert --- */
+        vm.expectRevert("already sealed");
+        imprint.sealEdition(2);
+    }
+
+    /* ❸ 未作成 Edition を seal すると revert */
+    function testSealEditionNonexistentReverts() public {
+        vm.expectRevert("unknown edition");
+        imprint.sealEdition(999);
     }
 
 
