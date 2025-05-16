@@ -18,8 +18,7 @@ contract ImprintV2 is Imprint {
         return "v2";
     }
 }
-
-
+import { SSTORE2 } from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 
 contract ImprintTest is TestHelper, IERC721Receiver {
     Imprint imprint;
@@ -28,6 +27,28 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     address[] allowedSeaDrop;
 
+    /*──────────── Helpers ────────────*/
+    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
+        bytes memory A = bytes(s);
+        bytes memory P = bytes(prefix);
+        if (P.length > A.length) return false;
+        for (uint256 i; i < P.length; ++i) if (A[i] != P[i]) return false;
+        return true;
+    }
+    function _contains(string memory s, string memory sub) internal pure returns (bool) {
+        bytes memory a = bytes(s);
+        bytes memory b = bytes(sub);
+        if (b.length > a.length) return false;
+
+        for (uint256 i; i <= a.length - b.length; ++i) {
+            bool ok = true;
+            for (uint256 j; j < b.length; ++j) {
+                if (a[i + j] != b[j]) { ok = false; break; }
+            }
+            if (ok) return true;
+        }
+        return false;
+    }
     function setUp() public {
         proxyAdmin = new ProxyAdmin();
         Imprint implementation = new Imprint();
@@ -156,6 +177,52 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     }
 
 
+    /* ------------------------------------------------------------------ */
+    /*              tokenImage / tokenURI 追加ロジック テスト              */
+    /* ------------------------------------------------------------------ */
+    /* ✱ desc 未登録時は revert する */
+    function testTokenImageRevertsWithoutDesc() public {
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 1);          // tokenId = 1
+        vm.expectRevert("desc missing");
+        imprint.tokenImage(1);
+    }
+
+    /* ✱ descPtr を直接書き込み → tokenImage 正常系 */
+    function testTokenImageReturnsDataURI() public {
+        /* 1. mint */
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 1);          // tokenId = 1
+
+        /* 2. SSTORE2 に description を書き込み */
+        address ptr = SSTORE2.write(bytes("Hello World"));
+
+        /* 3. storage slot = keccak256(abi.encode(tokenId, SLOT)) へ直接書き込む */
+        bytes32 slot = keccak256("worldcanon.imprint.storage.v0");
+        bytes32 mapSlot = keccak256(abi.encode(uint256(1), slot));
+        vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
+
+        /* 4. 取得チェック */
+        string memory img = imprint.tokenImage(1);
+        assertTrue(_startsWith(img, "data:image/svg+xml;base64,"));
+    }
+
+    /* ✱ tokenURI も base64 JSON を返す */
+    function testTokenURIReturnsDataURI() public {
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 1);
+
+        address ptr = SSTORE2.write(bytes("Hi World"));
+        bytes32 slot = keccak256("worldcanon.imprint.storage.v0");
+        bytes32 mapSlot = keccak256(abi.encode(uint256(1), slot));
+        vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
+
+        // set meta
+        imprint._adminSetMeta(1, 1, "GPT-4o", "SubjectX");
+
+        string memory uri = imprint.tokenURI(1);
+        assertTrue(_startsWith(uri, "data:application/json;base64,"));
+    }
 
 
 
