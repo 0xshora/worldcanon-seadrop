@@ -25,7 +25,8 @@ jobs:
 
       - name: Prepare Hardhat import paths
         run: |
-          ln -sfn ../lib src/lib
+          rm -rf src/lib
+          cp -R lib src/lib
 
       - name: Build
         run: yarn build
