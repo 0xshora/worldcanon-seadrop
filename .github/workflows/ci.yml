@@ -32,6 +32,9 @@ jobs:
       - name: Generate remappings.txt
         run: forge remappings > remappings.txt
 
+      - name: Install Foundry dependencies
+        run: forge install
+
       # ------ Hardhat build / type-check ------
       - name: Build (Hardhat compile + TypeScript)
         run: yarn build
