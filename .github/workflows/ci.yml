@@ -28,12 +28,12 @@ jobs:
       - name: Install node dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Install Foundry dependencies
+        run: forge install
+
       # ------ import remappings ------
       - name: Generate remappings.txt
         run: forge remappings > remappings.txt
-
-      - name: Install Foundry dependencies
-        run: forge install
 
       # ------ Hardhat build / type-check ------
       - name: Build (Hardhat compile + TypeScript)
