@@ -20,9 +20,10 @@ jobs:
 
       # ------ Foundry ------
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: latest   # or pin a hash/tag if you prefer
+        run: |
+          curl -L https://foundry.paradigm.xyz | bash
+          source ~/.bashrc
+          foundryup
 
       # ------ JS 依存 ------
       - name: Install node dependencies
