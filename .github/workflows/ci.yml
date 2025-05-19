@@ -20,10 +20,9 @@ jobs:
 
       # ------ Foundry ------
       - name: Install Foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          source ~/.bashrc
-          foundryup
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
 
       # ------ JS 依存 ------
       - name: Install node dependencies
