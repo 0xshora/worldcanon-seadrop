@@ -23,6 +23,10 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Prepare Hardhat import paths
+        run: |
+          ln -sfn ../lib src/lib
+
       - name: Build
         run: yarn build
 
