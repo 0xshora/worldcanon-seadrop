@@ -11,36 +11,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
-          node-version: 18.18.2  # adjust to your project requirement
-          cache: 'yarn'
+          node-version: 18.18.2
+          cache: yarn
 
-      - name: Install dependencies
-        run: yarn install
+      # ------ Foundry ------
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: latest   # or pin a hash/tag if you prefer
 
-      - name: Prepare Hardhat import paths
-        run: |
-          rm -rf src/lib
-          cp -R lib src/lib
+      # ------ JS 依存 ------
+      - name: Install node dependencies
+        run: yarn install --frozen-lockfile
 
-      - name: Build
+      # ------ import remappings ------
+      - name: Generate remappings.txt
+        run: forge remappings > remappings.txt
+
+      # ------ Hardhat build / type-check ------
+      - name: Build (Hardhat compile + TypeScript)
         run: yarn build
 
-      - name: Lint check
+      - name: Lint
         run: yarn lint:check
 
-      - name: Install Foundry
-        run: |
-          curl -L https://foundry.paradigm.xyz | bash
-          source ~/.bashrc
-          foundryup
-
+      # ------ Solidity tests ------
       - name: Run Foundry tests
         run: |
-          forge test --match-path test/foundry/Subject.t.sol \
-            && forge test --match-path ./test/foundry/Imprint.t.sol
+          forge test --match-path test/foundry/Subject.t.sol
+          forge test --match-path test/foundry/Imprint.t.sol
