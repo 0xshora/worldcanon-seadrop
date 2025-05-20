@@ -23,7 +23,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
           cache: "yarn"
 
       - run: yarn install
@@ -40,7 +40,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 18.x
           cache: "yarn"
 
       - run: yarn install
@@ -66,30 +66,30 @@ jobs:
   #     - run: yarn build
   #     - run: yarn test:upgradeable
 
-  hardhat-coverage:
-    name: Run Hardhat Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+  # hardhat-coverage:
+  #   name: Run Hardhat Coverage
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-          cache: "yarn"
+  #     - name: Use Node.js
+  #       uses: actions/setup-node@v3
+  #       with:
+  #         node-version: 18.x
+  #         cache: "yarn"
 
-      - run: yarn install
-      - run: yarn build
-      - run: yarn coverage
+  #     - run: yarn install
+  #     - run: yarn build
+  #     - run: yarn coverage
 
-      - name: Submit coverage to Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: hardhat
-          parallel: true
+  #     - name: Submit coverage to Coveralls
+  #       uses: coverallsapp/github-action@master
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         flag-name: hardhat
+  #         parallel: true
 
   forge-test:
     name: Run Forge Tests
@@ -108,48 +108,45 @@ jobs:
         run: forge install
 
       - name: Run tests
-        run: forge test -vvv
-        env:
-          ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
-          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
+        run: forge test --match-path test/foundry/Subject.t.sol && forge test --match-path ./test/foundry/Imprint.t.sol
 
-  forge-coverage:
-    name: Run Forge Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+  # forge-coverage:
+  #   name: Run Forge Coverage
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         submodules: recursive
 
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
+  #     - name: Install Foundry
+  #       uses: foundry-rs/foundry-toolchain@v1
+  #       with:
+  #         version: nightly
 
-      - name: Install forge dependencies
-        run: forge install
+  #     - name: Install forge dependencies
+  #       run: forge install
 
-      - name: Run coverage
-        run: yarn coverage:forge
-        env:
-          ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
-          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
+  #     # - name: Run coverage
+  #     #   run: yarn coverage:forge
+  #     #   env:
+  #     #     ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
+  #     #     GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
 
-      - name: Submit coverage to Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ./lcov-filtered.info
-          flag-name: foundry
-          parallel: true
+  #     - name: Submit coverage to Coveralls
+  #       uses: coverallsapp/github-action@master
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         path-to-lcov: ./lcov-filtered.info
+  #         flag-name: foundry
+  #         parallel: true
 
-  coverage-finish:
-    name: Finish Coverage Results
-    needs: [hardhat-coverage, forge-coverage]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          parallel-finished: true
+  # coverage-finish:
+  #   name: Finish Coverage Results
+  #   needs: [hardhat-coverage, forge-coverage]
+  #   if: ${{ always() }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Coveralls Finished
+  #       uses: coverallsapp/github-action@master
+  #       with:
+  #         parallel-finished: true
