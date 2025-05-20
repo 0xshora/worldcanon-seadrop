@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v3
         with:
@@ -26,7 +28,7 @@ jobs:
 
       # ------ JS 依存 ------
       - name: Install node dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --check-files
 
       - name: Install Foundry dependencies
         run: forge install
@@ -37,7 +39,7 @@ jobs:
 
       # ------ Hardhat build / type-check ------
       - name: Build (Hardhat compile + TypeScript)
-        run: yarn build
+        run: yarn build || (echo "Initial build failed, retrying with stack traces:" && yarn hardhat compile --show-stack-traces && false)
 
       - name: Lint
         run: yarn lint:check
