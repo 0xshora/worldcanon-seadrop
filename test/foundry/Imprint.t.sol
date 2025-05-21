@@ -311,6 +311,50 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     }
 
 
+    /*───────────────────────────────────────────────────────────────*/
+    /*               Edition / Seed ― view-helper のテスト            */
+    /*───────────────────────────────────────────────────────────────*/
+
+    function testViewHelpersBeforeAndAfterMint() public {
+        /* ========== ① mint 前 ========== */
+        {
+            // seedId = 1 の中身確認
+            ImprintStorage.ImprintSeed memory s1 = imprint.getSeed(1);
+            assertEq(s1.editionNo, 1);
+            assertEq(s1.localIndex, 1);
+            assertEq(s1.subjectName, "Seed1");
+            assertFalse(s1.claimed);
+
+            // edition #1 の残数 = 3
+            assertEq(imprint.remainingInEdition(1), 3);
+        }
+
+        /* ========== ② 2 枚 mint（Seed #1, #2 を claim） ========== */
+        vm.prank(allowedSeaDrop[0]);                       // SeaDrop を偽装
+        imprint.mintSeaDrop(address(this), 2);             // tokenId ⇒ 1,2 が発行
+
+        /* ⇒ getSeed.claimed が反映されているか */
+        assertTrue(imprint.getSeed(1).claimed);
+        assertTrue(imprint.getSeed(2).claimed);
+        assertFalse(imprint.getSeed(3).claimed);
+
+        /* ⇒ remainingInEdition() が 1 になるか */
+        assertEq(imprint.remainingInEdition(1), 1);
+
+        /* ⇒ getTokenMeta() が正しいか */
+        ImprintStorage.TokenMeta memory tm = imprint.getTokenMeta(1); // tokenId = 1
+        assertEq(tm.editionNo,   1);
+        assertEq(tm.localIndex,  1);
+        assertEq(tm.model,       "GPT-4o");
+        assertEq(tm.subjectName, "Seed1");
+    }
+
+    function testRemainingInEditionSoldOut() public {
+        /* 3 枚すべて mint すると残数は 0 */
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 3);
+        assertEq(imprint.remainingInEdition(1), 0);
+    }
 
     // function testMintInitialSetsSubjectMeta() public {
     //     string[] memory names = new string[](3);

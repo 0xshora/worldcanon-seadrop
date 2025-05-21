@@ -12,14 +12,14 @@
 
 ### ✅ 残タスクチェックリスト
 
+- [ ] **読み取りヘルパ**  
+  - `getSeed(seedId)`・`remainingInEdition(ed)`・`tokenMeta(tokenId)` を `view` で追加。  
+  - **Test:** 返値が正しい & ガス測定（`vm.recordGas` など）。
+
 - [ ] **worldCanon 連携（Subject⇄Imprint）**  
   - `setWorldCanon(address)` を `onlyOwner` & **一度だけ** 設定可能に。  
   - `mintSeaDrop` で Subject コントラクトへ `setLatestImprint(tokenId)` 等を呼び出す。  
   - **Test:** 二度目の設定は revert／Mint 後 Subject.latest が正しく更新される。
-
-- [ ] **読み取りヘルパ**  
-  - `getSeed(seedId)`・`remainingInEdition(ed)`・`tokenMeta(tokenId)` を `view` で追加。  
-  - **Test:** 返値が正しい & ガス測定（`vm.recordGas` など）。
 
 - [ ] **ETH / ERC20 引き出し**  
   - `withdraw(address payable to)` と `withdrawToken(address token, address to)` を `onlyOwner` で実装。  
