@@ -355,6 +355,39 @@ contract Imprint is ERC721SeaDropUpgradeable {
         return ImprintStorage.layout().editionHeaders[editionNo];
     }
 
+    /*─────────────── Edition / Seed view ───────────────*/
+    function getSeed(uint256 seedId)
+        external
+        view
+        returns (ImprintStorage.ImprintSeed memory)
+    {
+        return ImprintStorage.layout().seeds[seedId];
+    }
+
+    function remainingInEdition(uint64 editionNo)
+        external
+        view
+        returns (uint256 remaining)
+    {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        uint256 cursor = st.activeCursor;
+        uint256 last   = st.lastSeedId[editionNo];
+        if (cursor == 0 || cursor > last) return 0; // there is no edition or sold out
+
+        for (uint256 i = cursor; i <= last; ++i) {
+            if (!st.seeds[i].claimed) ++remaining;
+        }
+    }
+
+    /*─────────────── TokenMeta view ───────────────*/
+    function getTokenMeta(uint256 tokenId)
+        external
+        view
+        returns (ImprintStorage.TokenMeta memory)
+    {
+        return ImprintStorage.layout().meta[tokenId];
+    }
+
     uint256[50] private __gap;
 
 }
