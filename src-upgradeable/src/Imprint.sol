@@ -249,16 +249,7 @@ contract Imprint is ERC721SeaDropUpgradeable {
 
         uint256 firstTokenId = _nextTokenId();
 
-        // Extra safety check to ensure the max supply is not exceeded.
-        if (_totalMinted() + quantity > maxSupply()) {
-            revert MintQuantityExceedsMaxSupply(
-                _totalMinted() + quantity,
-                maxSupply()
-            );
-        }
-
-        _safeMint(to, quantity);                        // ERC721A が連番で発行
-
+        /*―――― ① メタデータを先に書く ――――*/
         for (uint256 i; i < quantity; ++i) {
             uint256 seedId  = cursor + i;
             uint256 tokenId = firstTokenId + i;
@@ -266,7 +257,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
             ImprintStorage.ImprintSeed storage s = st.seeds[seedId];
             s.claimed = true;
 
-            // 書き込み
             st.descPtr[tokenId] = s.descPtr;
             st.meta[tokenId] = ImprintStorage.TokenMeta({
                 editionNo:   s.editionNo,
@@ -278,7 +268,18 @@ contract Imprint is ERC721SeaDropUpgradeable {
             emit ImprintClaimed(seedId, tokenId, to);
         }
 
-        st.activeCursor = cursor + quantity;            // 次の Seed へ前進
+        st.activeCursor = cursor + quantity;
+
+        /*―――― ② 安全ミント（外部コール） ――――*/
+        _safeMint(to, quantity);
+
+        // /*―――― ③ Subject 側へ最新 Imprint を反映 ――――*/
+        // if (st.worldCanon != address(0)) {
+        //     Subject wc = Subject(st.worldCanon);
+        //     for (uint256 i; i < quantity; ++i) {
+        //         wc.setLatest(firstTokenId + i, firstTokenId + i); // 例
+        //     }
+        // }
     }
 
     /* ───────── setter(admin only, deprecated) ───────── */

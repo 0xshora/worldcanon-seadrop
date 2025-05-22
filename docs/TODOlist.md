@@ -12,7 +12,7 @@
 
 ### ✅ 残タスクチェックリスト
 
-- [ ] **読み取りヘルパ**  
+- [x] **読み取りヘルパ**  
   - `getSeed(seedId)`・`remainingInEdition(ed)`・`tokenMeta(tokenId)` を `view` で追加。  
   - **Test:** 返値が正しい & ガス測定（`vm.recordGas` など）。
 
