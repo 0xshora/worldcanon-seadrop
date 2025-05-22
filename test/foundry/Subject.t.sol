@@ -3,6 +3,10 @@ pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
 import {Subject} from "../../src-upgradeable/src/Subject.sol";
+import {LibNormalize} from "../../src-upgradeable/src/LibNormalize.sol";
+
+using LibNormalize for string;
+
 
 /*──── Minimal mock Imprint ────*/
 contract MockImprint {
@@ -72,7 +76,7 @@ contract SubjectTest is Test {
         string[] memory more = _names2("Gamma", "Delta");
         subject.addSubjects(more, 42);
         assertEq(subject.totalSupply(), 3);
-        (uint64 ed, ) = subject.subjectMeta(2);
+        (uint64 ed, , ) = subject.subjectMeta(2);
         assertEq(ed, 42);
     }
 
@@ -89,7 +93,7 @@ contract SubjectTest is Test {
         vm.expectEmit(true, true, false, true);
         emit LatestImprintUpdated(0, 777);
         subject.setLatest(0, 777);
-        (, uint256 latest) = subject.subjectMeta(0);
+        (, uint256 latest, ) = subject.subjectMeta(0);
         assertEq(latest, 777);
     }
 
@@ -125,5 +129,92 @@ contract SubjectTest is Test {
         subject.setLatest(0, 99);
         string memory uri1 = subject.tokenURI(0);
         assertTrue(_startsWith(uri1, "data:application/json;base64,"));
+    }
+
+    /*───────────────────────────────────────────────────────────────*\
+    |*                 ▼ sync to imprint test ▼                      *|
+    \*───────────────────────────────────────────────────────────────*/
+
+    /* syncFromImprint — 新規 Subject 自動生成 */
+    function testSyncFromImprintCreatesSubject() public {
+        // ① imprintContract セット
+        MockImprint mock = new MockImprint();
+        subject.setImprintContract(address(this)); // ← テストコントラクトを Imprint と見なす
+
+        // ② まだ totalSupply==0
+        assertEq(subject.totalSupply(), 0);
+
+        // ③ sync 呼び出し（新しい subjectName）
+        string memory name = "Happiness";
+        subject.syncFromImprint(name, 11, 1_000);
+
+        // ④ 自動生成を検証
+        assertEq(subject.totalSupply(), 1);
+        ( , uint256 latest, uint256 ts ) = subject.subjectMeta(0);
+        assertEq(latest, 11);
+        assertEq(ts,     1_000);
+
+        // ⑤ 名前ハッシュが TokenId(+1) に紐付いていること
+        bytes32 h = name.normHash();
+        uint256 idPlus1Stored;
+        assembly {
+            // private 変数でも直接ストレージを読める
+            idPlus1Stored := sload(add(h, 0x20))
+        }
+        assertEq(idPlus1Stored, 1); // tokenId 0 ⇒ +1 保存
+    }
+
+    /* syncFromImprint — 既存 Subject の更新と timestamp 比較 */
+    function testSyncFromImprintUpdatesOnlyNewer() public {
+        // セットアップ: 初期ミントで tokenId 0 を作成
+        subject.mintInitial(_names1("Ocean"));
+        subject.setImprintContract(address(this));
+
+        // 古い timestamp (500) で sync → 反映
+        subject.syncFromImprint("Ocean", 21, 500);
+        (, uint256 latestOld, uint256 tsOld) = subject.subjectMeta(0);
+        assertEq(latestOld, 21);
+        assertEq(tsOld,     500);
+
+        // 更に古い timestamp (400) で sync → 無視
+        subject.syncFromImprint("Ocean", 22, 400);
+        (, uint256 latestStill, uint256 tsStill) = subject.subjectMeta(0);
+        assertEq(latestStill, 21);
+        assertEq(tsStill,     500);
+
+        // 新しい timestamp (600) で sync → 上書き
+        subject.syncFromImprint("Ocean", 23, 600);
+        (, uint256 latestNew, uint256 tsNew) = subject.subjectMeta(0);
+        assertEq(latestNew, 23);
+        assertEq(tsNew,     600);
+    }
+
+    /* syncFromImprint — onlyImprint 修飾子 */
+    function testSyncFromImprintOnlyImprint() public {
+        subject.setImprintContract(address(0x1234));
+        vm.expectRevert("onlyImprint");
+        subject.syncFromImprint("X", 1, 100);
+    }
+
+    /* 名前正規化 & 重複ガード */
+    function testDuplicateNameGuard() public {
+        // mix 大文字・前後空白で同一視
+        string[] memory alpha = _names1("  ALPHA ");
+        subject.mintInitial(alpha);
+
+        // 同義語「alpha」登録は revert
+        vm.expectRevert("dup subject");
+        subject.addSubjects(_names1("alpha"), 1);
+    }
+
+    /* tokenURI placeholder when imprintContract not set */
+    function testTokenURIPlaceholderWhenNoImprintContract() public {
+        subject.mintInitial(_names1("Sky"));
+        // latestImprintId を >0 にする
+        subject.setLatest(0, 999);
+
+        // imprintContract は未設定 ⇒ placeholder 文字列（SVG data URL）を返す
+        string memory uri = subject.tokenURI(0);
+        assertTrue(_startsWith(uri, "data:application/json;base64,"));
     }
 }

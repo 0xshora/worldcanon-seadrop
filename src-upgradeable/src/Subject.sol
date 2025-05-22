@@ -10,22 +10,70 @@ import {Base64}  from "openzeppelin-contracts/utils/Base64.sol";
 /*── Imprint interface ──*/
 interface IImprint { function tokenImage(uint256) external view returns (string memory); }
 
+/*── LibNormalize ──*/
+import {LibNormalize} from "./LibNormalize.sol";
+
+using LibNormalize for string;
+
 /*================================================================================================
                                    Subject – Immutable ERC-721
 ================================================================================================*/
 contract Subject is ERC721, Ownable {
-    struct SubjectMeta { uint64 addedEditionNo; uint256 latestImprintId; }
+    struct SubjectMeta {
+        uint64 addedEditionNo;
+        uint256 latestImprintId;
+        uint256 latestTimestamp;
+    }
 
     mapping(uint256 => SubjectMeta) public subjectMeta;
+    // tokenId to name
     mapping(uint256 => string)      private _subjectNames;
+    // name to tokenId(1-index)
+    mapping(bytes32 => uint256) private _nameHashToIdPlus1;
 
     uint256  public totalSupply;
     address  public imprintContract;
 
+    /*───────────── events ─────────────*/
     event ImprintContractSet(address indexed imprint);
     event LatestImprintUpdated(uint256 indexed tokenId, uint256 indexed imprintId);
 
+    /*───────────── modifiers ───────────*/
+    modifier onlyImprint() {
+        require(msg.sender == imprintContract, "onlyImprint");
+        _;
+    }
     constructor(string memory name_, string memory symbol_) ERC721(name_, symbol_) {}
+
+
+    function syncFromImprint(
+        string calldata subjectName,
+        uint256 imprintId,
+        uint64  ts
+    ) external onlyImprint {
+        bytes32 h       = subjectName.normHash();
+        uint256 idPlus1 = _nameHashToIdPlus1[h];
+        uint256 tokenId;
+
+        /*――― ① まだ存在しない場合＝新規 Subject ―――*/
+        if (idPlus1 == 0) {
+            tokenId = totalSupply;              // 次の ID
+            _mint(owner(), tokenId);            // Owner (= キュレーター) 保有で発行
+            _subjectNames[tokenId]   = subjectName;
+            _nameHashToIdPlus1[h]    = tokenId + 1; // +1 オフセット保存
+            subjectMeta[tokenId].addedEditionNo = 0; // 動的追加なので 0
+            totalSupply += 1;
+        } else {
+            tokenId = idPlus1 - 1;              // 既存 ID
+        }
+
+        /*――― ② より新しい timestamp なら latest を更新 ―――*/
+        if (ts > subjectMeta[tokenId].latestTimestamp) {
+            subjectMeta[tokenId].latestImprintId = imprintId;
+            subjectMeta[tokenId].latestTimestamp = ts;
+            emit LatestImprintUpdated(tokenId, imprintId);
+        }
+    }
 
     /*────────────────────────── Owner-only ──────────────────────────*/
     function mintInitial(string[] calldata names) external onlyOwner {
@@ -36,8 +84,20 @@ contract Subject is ERC721, Ownable {
             _mint(msg.sender, i);
             _subjectNames[i]              = names[i];
             subjectMeta[i].addedEditionNo = 0;
+
+            bytes32 h = names[i].normHash();
+            require(_nameHashToIdPlus1[h] == 0, "dup");
+            _nameHashToIdPlus1[h] = i + 1;  // id + 1を保存
+            totalSupply += 1;
         }
-        totalSupply = n;
+    }
+
+    /*────────────────────────── Owner-only ──────────────────────────*/
+    function setImprintContract(address imprint) external onlyOwner {
+        require(imprintContract == address(0), "already set");
+        require(imprint != address(0),         "zero addr");
+        imprintContract = imprint;
+        emit ImprintContractSet(imprint);
     }
 
     function addSubjects(string[] calldata names, uint64 editionNo) external onlyOwner {
@@ -47,6 +107,10 @@ contract Subject is ERC721, Ownable {
             _mint(msg.sender, id);
             _subjectNames[id]              = names[i];
             subjectMeta[id].addedEditionNo = editionNo;
+            
+            bytes32 h = names[i].normHash();
+            require(_nameHashToIdPlus1[h] == 0, "dup subject");   // Guard
+            _nameHashToIdPlus1[h] = id + 1; 
         }
         totalSupply += n;
     }
@@ -57,19 +121,13 @@ contract Subject is ERC721, Ownable {
         emit LatestImprintUpdated(tokenId, imprintId);
     }
 
-    function setImprintContract(address imprint) external onlyOwner {
-        require(imprint != address(0), "zero addr");
-        imprintContract = imprint;
-        emit ImprintContractSet(imprint);
-    }
-
     /*────────────────────────── tokenURI ───────────────────────────*/
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         require(_exists(tokenId), "nonexistent");
         SubjectMeta memory m = subjectMeta[tokenId];
         string memory name_  = _subjectNames[tokenId];
 
-        string memory imageURI = m.latestImprintId == 0
+        string memory imageURI = (m.latestImprintId == 0 || imprintContract == address(0))
             ? _placeholderSVG(name_)
             : IImprint(imprintContract).tokenImage(m.latestImprintId);
 
