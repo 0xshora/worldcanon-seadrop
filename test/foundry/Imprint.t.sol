@@ -19,6 +19,26 @@ contract ImprintV2 is Imprint {
         return "v2";
     }
 }
+
+// Mock Subject contract for testing
+contract MockSubject {
+    struct Call {
+        string subjectName;
+        uint256 imprintId;
+        uint64 ts;
+    }
+    
+    Call[] public syncCalls;
+    
+    function syncFromImprint(string calldata subjectName, uint256 imprintId, uint64 ts) external {
+        syncCalls.push(Call(subjectName, imprintId, ts));
+    }
+    
+    function getCallCount() external view returns (uint256) {
+        return syncCalls.length;
+    }
+}
+
 import { SSTORE2 } from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 
 contract ImprintTest is TestHelper, IERC721Receiver {
@@ -462,5 +482,83 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertEq(imprint.ownerOf(1), address(this));
         assertEq(imprint.ownerOf(2), address(this));
         assertEq(imprint.ownerOf(3), address(this));
+    }
+
+    /*───────────────────────────────────────────────────────────────*/
+    /*                     WorldCanon Integration Tests               */
+    /*───────────────────────────────────────────────────────────────*/
+
+    event WorldCanonSet(address indexed worldCanon);
+
+    function testSetWorldCanonOnlyOwner() public {
+        address mockSubject = address(0x9999);
+        
+        // Non-owner should revert
+        vm.prank(user);
+        vm.expectRevert();
+        imprint.setWorldCanon(mockSubject);
+        
+        // Owner should succeed
+        vm.expectEmit(true, false, false, false);
+        emit WorldCanonSet(mockSubject);
+        imprint.setWorldCanon(mockSubject);
+        
+        assertEq(imprint.getWorldCanon(), mockSubject);
+    }
+
+    function testSetWorldCanonOnlyOnce() public {
+        address mockSubject = address(0x9999);
+        
+        // First set should succeed
+        imprint.setWorldCanon(mockSubject);
+        assertEq(imprint.getWorldCanon(), mockSubject);
+        
+        // Second set should revert
+        vm.expectRevert("worldCanon already set");
+        imprint.setWorldCanon(address(0x8888));
+    }
+
+    function testSetWorldCanonZeroAddressReverts() public {
+        vm.expectRevert("zero address");
+        imprint.setWorldCanon(address(0));
+    }
+
+    function testMintSeaDropCallsSubjectSync() public {
+        // Deploy mock Subject contract
+        MockSubject mockSubject = new MockSubject();
+        
+        // Set world canon
+        imprint.setWorldCanon(address(mockSubject));
+        
+        // Mint 2 tokens through SeaDrop
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 2);
+        
+        // Verify Subject.syncFromImprint was called twice
+        assertEq(mockSubject.getCallCount(), 2);
+        
+        // Verify first call parameters
+        (string memory name1, uint256 id1, uint64 ts1) = mockSubject.syncCalls(0);
+        assertEq(name1, "Seed1");
+        assertEq(id1, 1);
+        assertEq(ts1, uint64(block.timestamp));
+        
+        // Verify second call parameters
+        (string memory name2, uint256 id2, uint64 ts2) = mockSubject.syncCalls(1);
+        assertEq(name2, "Seed2");
+        assertEq(id2, 2);
+        assertEq(ts2, uint64(block.timestamp));
+    }
+
+    function testMintSeaDropWithoutWorldCanon() public {
+        // Ensure worldCanon is not set
+        assertEq(imprint.getWorldCanon(), address(0));
+        
+        // Mint should succeed without calling Subject
+        vm.prank(allowedSeaDrop[0]);
+        imprint.mintSeaDrop(address(this), 1);
+        
+        assertEq(imprint.totalSupply(), 1);
+        assertEq(imprint.ownerOf(1), address(this));
     }
 }
