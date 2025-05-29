@@ -6,6 +6,11 @@ import { SSTORE2 } from "../lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 import {Base64}  from "openzeppelin-contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 
+/// Interface for Subject contract
+interface ISubject {
+    function syncFromImprint(string calldata subjectName, uint256 imprintId, uint64 ts) external;
+}
+
 /// ──────────────────────────────────────────────────────────────
 ///  ImprintStorage  ── World Canon / Imprint  固定ストレージ
 /// ──────────────────────────────────────────────────────────────
@@ -108,6 +113,7 @@ contract Imprint is ERC721SeaDropUpgradeable {
     event SeedsAdded(uint64 indexed editionNo, uint256 count);
     event ImprintClaimed(uint256 indexed seedId, uint256 indexed tokenId, address indexed to);
     event ActiveEditionChanged(uint64 indexed newEdition);
+    event WorldCanonSet(address indexed worldCanon);
 
     /* ──────────────── init ──────────────── */
     function __Imprint_init(
@@ -273,13 +279,16 @@ contract Imprint is ERC721SeaDropUpgradeable {
         /*―――― ② 安全ミント（外部コール） ――――*/
         _safeMint(to, quantity);
 
-        // /*―――― ③ Subject 側へ最新 Imprint を反映 ――――*/
-        // if (st.worldCanon != address(0)) {
-        //     Subject wc = Subject(st.worldCanon);
-        //     for (uint256 i; i < quantity; ++i) {
-        //         wc.setLatest(firstTokenId + i, firstTokenId + i); // 例
-        //     }
-        // }
+        /*―――― ③ Subject 側へ最新 Imprint を反映 ――――*/
+        if (st.worldCanon != address(0)) {
+            ISubject wc = ISubject(st.worldCanon);
+            for (uint256 i; i < quantity; ++i) {
+                uint256 tokenId = firstTokenId + i;
+                ImprintStorage.TokenMeta memory meta = st.meta[tokenId];
+                // syncFromImprint(subjectName, imprintId, timestamp)を呼び出す
+                wc.syncFromImprint(meta.subjectName, tokenId, uint64(block.timestamp));
+            }
+        }
     }
 
     /* ───────── setter(admin only, deprecated) ───────── */
@@ -387,6 +396,19 @@ contract Imprint is ERC721SeaDropUpgradeable {
         returns (ImprintStorage.TokenMeta memory)
     {
         return ImprintStorage.layout().meta[tokenId];
+    }
+
+    /*─────────────── WorldCanon integration ───────────────*/
+    function setWorldCanon(address worldCanon) external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        require(st.worldCanon == address(0), "worldCanon already set");
+        require(worldCanon != address(0), "zero address");
+        st.worldCanon = worldCanon;
+        emit WorldCanonSet(worldCanon);
+    }
+
+    function getWorldCanon() external view returns (address) {
+        return ImprintStorage.layout().worldCanon;
     }
 
     uint256[50] private __gap;

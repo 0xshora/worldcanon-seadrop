@@ -16,7 +16,7 @@
   - `getSeed(seedId)`・`remainingInEdition(ed)`・`tokenMeta(tokenId)` を `view` で追加。  
   - **Test:** 返値が正しい & ガス測定（`vm.recordGas` など）。
 
-- [ ] **worldCanon 連携（Subject⇄Imprint）**  
+- [x] **worldCanon 連携（Subject⇄Imprint）**  
   - `setWorldCanon(address)` を `onlyOwner` & **一度だけ** 設定可能に。  
   - `mintSeaDrop` で Subject コントラクトへ `setLatestImprint(tokenId)` 等を呼び出す。  
   - **Test:** 二度目の設定は revert／Mint 後 Subject.latest が正しく更新される。
@@ -24,6 +24,7 @@
 - [ ] **ETH / ERC20 引き出し**  
   - `withdraw(address payable to)` と `withdrawToken(address token, address to)` を `onlyOwner` で実装。  
   - **Test:** ノンオーナーは revert／受取アドレス残高が増える。
+  - クラスを継承しているため、やる必要があるかを先に確認すること。
 
 - [ ] **Mint Pause & Edition Close**  
   - `bool mintPaused` と `setMintPaused(bool)`。  
