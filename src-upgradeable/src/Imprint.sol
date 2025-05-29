@@ -5,6 +5,10 @@ import { ERC721SeaDropUpgradeable } from "./ERC721SeaDropUpgradeable.sol";
 import { SSTORE2 } from "../lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 import {Base64}  from "openzeppelin-contracts/utils/Base64.sol";
 import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
+import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
+import {INonFungibleSeaDropTokenUpgradeable} from "./interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
+import {ISeaDropTokenContractMetadataUpgradeable} from "./interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
 
 /// Interface for Subject contract
 interface ISubject {
@@ -65,6 +69,7 @@ library ImprintStorage {
         /* --- Globals --- */
         address  worldCanon;   // Subject コントラクト (set once)
         uint64   maxSupply;    // 0 = unlimited
+        bool     mintPaused;   // Mint一時停止フラグ
     }
 
     /*═════════ ③ 取得ヘルパ ═════════*/
@@ -114,6 +119,9 @@ contract Imprint is ERC721SeaDropUpgradeable {
     event ImprintClaimed(uint256 indexed seedId, uint256 indexed tokenId, address indexed to);
     event ActiveEditionChanged(uint64 indexed newEdition);
     event WorldCanonSet(address indexed worldCanon);
+    event MintPausedSet(bool paused);
+    event ETHWithdrawn(address indexed to, uint256 amount);
+    event ERC20Withdrawn(address indexed token, address indexed to, uint256 amount);
 
     /* ──────────────── init ──────────────── */
     function __Imprint_init(
@@ -244,8 +252,10 @@ contract Imprint is ERC721SeaDropUpgradeable {
         nonReentrant
     {
         _onlyAllowedSeaDrop(msg.sender);
-
+        
         ImprintStorage.Layout storage st = ImprintStorage.layout();
+        require(!st.mintPaused, "minting paused");
+
         uint64 ed = st.activeEdition;
         require(ed != 0, "no active edition");
 
@@ -409,6 +419,71 @@ contract Imprint is ERC721SeaDropUpgradeable {
 
     function getWorldCanon() external view returns (address) {
         return ImprintStorage.layout().worldCanon;
+    }
+
+    /*─────────────── Mint Pause ───────────────*/
+    function setMintPaused(bool paused) external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        st.mintPaused = paused;
+        emit MintPausedSet(paused);
+    }
+
+    function isMintPaused() external view returns (bool) {
+        return ImprintStorage.layout().mintPaused;
+    }
+
+    function closeActiveEdition() external onlyOwner {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        st.activeEdition = 0;
+        st.activeCursor = 0;
+        emit ActiveEditionChanged(0);
+    }
+
+    /*─────────────── Edition Info ───────────────*/
+    function editionSize(uint64 ed) external view returns (uint256) {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        uint256 first = st.firstSeedId[ed];
+        uint256 last = st.lastSeedId[ed];
+        if (first == 0 || last == 0) return 0;
+        return last - first + 1;
+    }
+
+    /*─────────────── Withdrawals ───────────────*/
+    function withdraw(address payable to) external onlyOwner {
+        require(to != address(0), "zero address");
+        uint256 balance = address(this).balance;
+        require(balance > 0, "no ETH to withdraw");
+        
+        (bool success, ) = to.call{value: balance}("");
+        require(success, "ETH transfer failed");
+        
+        emit ETHWithdrawn(to, balance);
+    }
+
+    function withdrawToken(address token, address to) external onlyOwner {
+        require(token != address(0), "zero token address");
+        require(to != address(0), "zero to address");
+        
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        require(balance > 0, "no tokens to withdraw");
+        
+        require(IERC20(token).transfer(to, balance), "token transfer failed");
+        
+        emit ERC20Withdrawn(token, to, balance);
+    }
+
+    /*─────────────── Interface Support ───────────────*/
+    function supportsInterface(bytes4 interfaceId) 
+        public 
+        view 
+        virtual 
+        override(ERC721SeaDropUpgradeable) 
+        returns (bool) 
+    {
+        return 
+            interfaceId == type(INonFungibleSeaDropTokenUpgradeable).interfaceId ||
+            interfaceId == type(ISeaDropTokenContractMetadataUpgradeable).interfaceId ||
+            super.supportsInterface(interfaceId);
     }
 
     uint256[50] private __gap;

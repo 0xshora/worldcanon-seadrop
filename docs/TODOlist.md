@@ -21,21 +21,21 @@
   - `mintSeaDrop` で Subject コントラクトへ `setLatestImprint(tokenId)` 等を呼び出す。  
   - **Test:** 二度目の設定は revert／Mint 後 Subject.latest が正しく更新される。
 
-- [ ] **ETH / ERC20 引き出し**  
+- [x] **ETH / ERC20 引き出し**  
   - `withdraw(address payable to)` と `withdrawToken(address token, address to)` を `onlyOwner` で実装。  
   - **Test:** ノンオーナーは revert／受取アドレス残高が増える。
   - クラスを継承しているため、やる必要があるかを先に確認すること。
 
-- [ ] **Mint Pause & Edition Close**  
+- [x] **Mint Pause & Edition Close**  
   - `bool mintPaused` と `setMintPaused(bool)`。  
   - `closeActiveEdition()` で `activeEdition = 0` & `activeCursor = 0`。  
   - **Test:** Pause 中は mintSeaDrop が revert。Close 後は再度 Edition 設定が必要。
 
-- [ ] **Edition Size 表示**  
+- [x] **Edition Size 表示**  
   - `editionSize(uint64 ed) returns (uint256)` を実装（`lastSeedId - firstSeedId + 1`）。  
   - **Test:** Seal 後でも正値が返る。
 
-- [ ] **supportsInterface 拡張**  
+- [x] **supportsInterface 拡張**  
   - 新規 `ISubjectAware` など追加時は `supportsInterface` に反映。  
   - **Test:** `IERC165.supportsInterface` が true を返す。
 
