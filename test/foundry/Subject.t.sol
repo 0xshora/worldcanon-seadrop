@@ -155,13 +155,17 @@ contract SubjectTest is Test {
         assertEq(ts,     1_000);
 
         // ⑤ 名前ハッシュが TokenId(+1) に紐付いていること
-        bytes32 h = name.normHash();
-        uint256 idPlus1Stored;
-        assembly {
-            // private 変数でも直接ストレージを読める
-            idPlus1Stored := sload(add(h, 0x20))
-        }
-        assertEq(idPlus1Stored, 1); // tokenId 0 ⇒ +1 保存
+        // アプローチを変更: publicのgetSubjectIdByName関数が必要か、
+        // またはマッピングへの直接アクセスはテストでは困難なので、
+        // 同じ名前でもう一度syncFromImprintを呼び出して既存のIDが使われることを確認
+        string memory sameName = "Happiness";
+        uint256 prevSupply = subject.totalSupply();
+        subject.syncFromImprint(sameName, 12, 2_000);
+        assertEq(subject.totalSupply(), prevSupply); // 新しいSubjectは作成されない
+        
+        ( , uint256 latestAfter, uint256 tsAfter ) = subject.subjectMeta(0);
+        assertEq(latestAfter, 12);
+        assertEq(tsAfter, 2_000);
     }
 
     /* syncFromImprint — 既存 Subject の更新と timestamp 比較 */
