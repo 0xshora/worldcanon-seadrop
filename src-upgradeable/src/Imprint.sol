@@ -372,53 +372,31 @@ contract Imprint is ERC721SeaDropUpgradeable {
         descriptor = _descriptor;
     }
 
-
-    /*─────────────── Minimal Public Getters ───────────────*/
+    // Minimal getters for ImprintViews compatibility  
     function getEditionHeader(uint64 editionNo) external view returns (ImprintStorage.EditionHeader memory) {
         return ImprintStorage.layout().editionHeaders[editionNo];
     }
-
     function getSeed(uint256 seedId) external view returns (ImprintStorage.ImprintSeed memory) {
         return ImprintStorage.layout().seeds[seedId];
     }
-
     function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory) {
         return ImprintStorage.layout().meta[tokenId];
     }
-
-    // For descriptor compatibility - returns individual fields
     function descPtr(uint256 tokenId) external view returns (address) {
         return ImprintStorage.layout().descPtr[tokenId];
     }
-
     function remainingInEdition(uint64 editionNo) external view returns (uint256 remaining) {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
-        uint256 cursor = st.activeCursor;
-        uint256 last = st.lastSeedId[editionNo];
+        uint256 cursor = st.activeCursor; uint256 last = st.lastSeedId[editionNo];
         if (cursor == 0 || cursor > last) return 0;
-
-        unchecked {
-            for (uint256 i = cursor; i <= last; ++i) {
-                if (!st.seeds[i].claimed) ++remaining;
-            }
-        }
+        unchecked { for (uint256 i = cursor; i <= last; ++i) if (!st.seeds[i].claimed) ++remaining; }
     }
-
-    // Additional minimal getters for ImprintViews compatibility
-    function getWorldCanon() external view returns (address) {
-        return ImprintStorage.layout().worldCanon;
-    }
-
-    function isMintPaused() external view returns (bool) {
-        return ImprintStorage.layout().mintPaused;
-    }
-
+    function getWorldCanon() external view returns (address) { return ImprintStorage.layout().worldCanon; }
+    function isMintPaused() external view returns (bool) { return ImprintStorage.layout().mintPaused; }
     function editionSize(uint64 ed) external view returns (uint256) {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
-        uint256 first = st.firstSeedId[ed];
-        uint256 last = st.lastSeedId[ed];
-        if (first == 0 || last == 0) return 0;
-        return last - first + 1;
+        uint256 first = st.firstSeedId[ed]; uint256 last = st.lastSeedId[ed];
+        return (first == 0 || last == 0) ? 0 : last - first + 1;
     }
 
     uint256[51] private __gap;
