@@ -6,6 +6,7 @@ import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 import { Imprint, ImprintStorage, SeedInput, DescMissing, DescriptorFail, MintingPaused, UnknownEdition, ZeroAddress, EditionExists, AlreadySealed, WorldCanonAlreadySet, NoActiveEdition } from "../../src-upgradeable/src/Imprint.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
 import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
+import { IImprintDescriptor } from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
 import { TransparentUpgradeableProxy } from
     "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from
@@ -272,8 +273,8 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         bytes32 mapSlot = keccak256(abi.encode(uint256(1), uint256(slot))); // descPtr mapping のキー
         vm.store(address(imprint), mapSlot, bytes32(uint256(0)));
 
-        vm.expectRevert(DescriptorFail.selector);
-        imprint.tokenImage(1);
+        vm.expectRevert();
+        IImprintDescriptor(imprint.descriptor()).tokenImage(1);
     }
 
     /* ✱ descPtr を直接書き込み → tokenImage 正常系 */
@@ -291,7 +292,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
 
         /* 4. 取得チェック */
-        string memory img = imprint.tokenImage(1);
+        string memory img = IImprintDescriptor(imprint.descriptor()).tokenImage(1);
         assertTrue(_startsWith(img, "data:image/svg+xml;base64,"));
     }
 

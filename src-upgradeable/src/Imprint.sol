@@ -65,7 +65,6 @@ library ImprintStorage {
 
         /* --- Globals --- */
         address  worldCanon;   // Subject コントラクト (set once)
-        uint64   maxSupply;    // 0 = unlimited
         bool     mintPaused;   // Mint一時停止フラグ
     }
 
@@ -126,11 +125,8 @@ contract Imprint is ERC721SeaDropUpgradeable {
     /* ──────────────── events ──────────────── */
     event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
     event EditionSealed(uint64 indexed editionNo);
-    event SeedsAdded(uint64 indexed editionNo, uint256 count);
-    event ImprintClaimed(uint256 indexed seedId, uint256 indexed tokenId, address indexed to);
     event ActiveEditionChanged(uint64 indexed newEdition);
     event WorldCanonSet(address indexed worldCanon);
-    event MintPausedSet(bool paused);
 
     /* ──────────────── init ──────────────── */
     function __Imprint_init(
@@ -191,25 +187,25 @@ contract Imprint is ERC721SeaDropUpgradeable {
 
         uint64 batchEdition = inputs[0].editionNo;
 
+        // Batch validation outside loop
+        ImprintStorage.EditionHeader storage hdr = st.editionHeaders[batchEdition];
+        if (hdr.editionNo == 0) revert EditionMissing();
+        if (hdr.isSealed) revert EditionAlreadySealed();
+
         unchecked {
             for (uint256 i; i < n; ++i) {
             SeedInput calldata sIn = inputs[i];
             if (sIn.editionNo != batchEdition) revert MixedEdition();
             if (sIn.desc.length == 0) revert EmptyDesc();
 
-            ImprintStorage.EditionHeader storage hdr =
-                st.editionHeaders[sIn.editionNo];
-            if (hdr.editionNo == 0) revert EditionMissing();
-            if (hdr.isSealed) revert EditionAlreadySealed();
-
-            if (st.localIndexTaken[sIn.editionNo][sIn.localIndex]) {
+            if (st.localIndexTaken[batchEdition][sIn.localIndex]) {
                 revert DuplicateLocalIdx();
             }
-            st.localIndexTaken[sIn.editionNo][sIn.localIndex] = true;
+            st.localIndexTaken[batchEdition][sIn.localIndex] = true;
 
             uint256 newId = ++st.nextSeedId;
             st.seeds[newId] = ImprintStorage.ImprintSeed({
-                editionNo:   sIn.editionNo,
+                editionNo:   batchEdition,
                 localIndex:  sIn.localIndex,
                 subjectId:   sIn.subjectId,
                 subjectName: sIn.subjectName,
@@ -217,14 +213,13 @@ contract Imprint is ERC721SeaDropUpgradeable {
                 claimed:     false
             });
 
-            if (st.firstSeedId[sIn.editionNo] == 0) {
-                st.firstSeedId[sIn.editionNo] = newId;
+            if (st.firstSeedId[batchEdition] == 0) {
+                st.firstSeedId[batchEdition] = newId;
             }
-            st.lastSeedId[sIn.editionNo] = newId;
+            st.lastSeedId[batchEdition] = newId;
             }
         }
 
-        emit SeedsAdded(batchEdition, n);
     }
 
 
@@ -276,6 +271,7 @@ contract Imprint is ERC721SeaDropUpgradeable {
         uint256 firstTokenId = _nextTokenId();
 
         /*―――― ① メタデータを先に書く ――――*/
+        string memory model = st.editionHeaders[ed].model;
         unchecked {
             for (uint256 i; i < quantity; ++i) {
             uint256 seedId  = cursor + i;
@@ -286,13 +282,11 @@ contract Imprint is ERC721SeaDropUpgradeable {
 
             st.descPtr[tokenId] = s.descPtr;
             st.meta[tokenId] = ImprintStorage.TokenMeta({
-                editionNo:   s.editionNo,
+                editionNo:   ed,
                 localIndex:  s.localIndex,
-                model:       st.editionHeaders[ed].model,
+                model:       model,
                 subjectName: s.subjectName
             });
-
-            emit ImprintClaimed(seedId, tokenId, to);
             }
         }
 
@@ -316,20 +310,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
     }
 
 
-    /// @notice Subject コントラクトが呼ぶプレーン SVG Data-URI
-    function tokenImage(uint256 tokenId) external view returns (string memory) {
-        if (!_exists(tokenId)) revert TokenNonexistent();
-        if (descriptor == address(0)) revert DescriptorUnset();
-        
-        (bool ok, bytes memory data) = descriptor.staticcall(
-            abi.encodeWithSelector(
-                IImprintDescriptor.tokenImage.selector, 
-                tokenId
-            )
-        );
-        if (!ok) revert DescriptorFail();
-        return abi.decode(data, (string));
-    }
 
     /// @notice Marketplace 表示用 JSON メタデータ
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -363,7 +343,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
     function setMintPaused(bool paused) external onlyOwner {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         st.mintPaused = paused;
-        emit MintPausedSet(paused);
     }
 
 

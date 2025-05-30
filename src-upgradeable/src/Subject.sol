@@ -8,7 +8,12 @@ import {Strings} from "openzeppelin-contracts/utils/Strings.sol";
 import {Base64}  from "openzeppelin-contracts/utils/Base64.sol";
 
 /*── Imprint interface ──*/
-interface IImprint { function tokenImage(uint256) external view returns (string memory); }
+interface IImprint { 
+    function descriptor() external view returns (address);
+}
+interface IImprintDescriptor { 
+    function tokenImage(uint256) external view returns (string memory); 
+}
 
 /*── LibNormalize ──*/
 import {LibNormalize} from "./LibNormalize.sol";
@@ -129,7 +134,7 @@ contract Subject is ERC721, Ownable {
 
         string memory imageURI = (m.latestImprintId == 0 || imprintContract == address(0))
             ? _placeholderSVG(name_)
-            : IImprint(imprintContract).tokenImage(m.latestImprintId);
+            : IImprintDescriptor(IImprint(imprintContract).descriptor()).tokenImage(m.latestImprintId);
 
         bytes memory json = abi.encodePacked(
             '{"name":"#', Strings.toString(tokenId), ' - ', name_, '"',
