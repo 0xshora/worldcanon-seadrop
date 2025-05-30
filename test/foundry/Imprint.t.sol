@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
-import { Imprint, ImprintStorage, SeedInput, DescMissing, DescriptorFail, MintingPaused, UnknownEdition, ZeroAddress, EditionExists, AlreadySealed, WorldCanonAlreadySet, NoActiveEdition } from "../../src-upgradeable/src/Imprint.sol";
+import { Imprint, ImprintStorage, SeedInput, DescMissing, DescriptorFail, MP, UE, ZeroAddress, EE, AS, WorldCanonAlreadySet, NAE } from "../../src-upgradeable/src/Imprint.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
 import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
 import { IImprintDescriptor } from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
@@ -352,7 +352,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertFalse(h.isSealed);
 
         /* --- 二重作成は revert --- */
-        vm.expectRevert(EditionExists.selector);
+        vm.expectRevert(EE.selector);
         imprint.createEdition(ed, model);
     }
 
@@ -369,13 +369,13 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertTrue(h.isSealed);
 
         /* --- 既に sealed 済みの Edition を再度 seal すると revert --- */
-        vm.expectRevert(AlreadySealed.selector);
+        vm.expectRevert(AS.selector);
         imprint.sealEdition(3);
     }
 
     /* ❸ 未作成 Edition を seal すると revert */
     function testSealEditionNonexistentReverts() public {
-        vm.expectRevert(UnknownEdition.selector);
+        vm.expectRevert(UE.selector);
         imprint.sealEdition(999);
     }
 
@@ -635,7 +635,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         
         // Try to mint
         vm.prank(allowedSeaDrop[0]);
-        vm.expectRevert(MintingPaused.selector);
+        vm.expectRevert(MP.selector);
         imprint.mintSeaDrop(address(this), 1);
     }
 
@@ -648,7 +648,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         
         // Try to mint - should fail with "no active edition"
         vm.prank(allowedSeaDrop[0]);
-        vm.expectRevert(NoActiveEdition.selector);
+        vm.expectRevert(NAE.selector);
         imprint.mintSeaDrop(address(this), 1);
     }
 
