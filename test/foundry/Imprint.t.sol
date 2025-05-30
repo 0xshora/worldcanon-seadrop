@@ -3,7 +3,9 @@ pragma solidity ^0.8.17;
 
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
-import { Imprint, ImprintStorage, SeedInput } from "../../src-upgradeable/src/Imprint.sol";
+import { Imprint, ImprintStorage, SeedInput, DescMissing, DescriptorFail, MintingPaused, UnknownEdition, ZeroAddress, EditionExists, AlreadySealed, WorldCanonAlreadySet, NoActiveEdition } from "../../src-upgradeable/src/Imprint.sol";
+import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
+import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
 import { TransparentUpgradeableProxy } from
     "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import { ProxyAdmin } from
@@ -49,6 +51,8 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     // Allow contract to receive ETH for withdrawal testing
     receive() external payable {}
     Imprint imprint;
+    ImprintViews imprintViews;
+    ImprintDescriptor imprintDescriptor;
     ProxyAdmin proxyAdmin;
     address user = address(0x123);
 
@@ -99,6 +103,13 @@ contract ImprintTest is TestHelper, IERC721Receiver {
             );
 
         imprint = Imprint(address(proxy));
+        
+        // Deploy ImprintViews
+        imprintViews = new ImprintViews(address(imprint));
+        
+        // Deploy and set ImprintDescriptor
+        imprintDescriptor = new ImprintDescriptor(address(imprint));
+        imprint.setDescriptor(address(imprintDescriptor));
 
         imprint.setMaxSupply(1000);
         // imprint.updateCreatorPayoutAddress(seadrop, user);
@@ -173,11 +184,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         imprint.addSeeds(seeds2);
     }
 
-    function testInitializeSvgPointers() public view {
-        address prefixPtr = imprint.svgPrefixPtr();
-        address suffixPtr = imprint.svgSuffixPtr();
-        assertTrue(prefixPtr != address(0));
-        assertTrue(suffixPtr != address(0));
+    function testInitializeDescriptor() public view {
+        // Test that descriptor has been set in setUp
+        address currentDescriptor = imprint.descriptor();
+        assertEq(currentDescriptor, address(imprintDescriptor));
     }
 
     function testInitializeImprint() public view {
@@ -262,7 +272,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         bytes32 mapSlot = keccak256(abi.encode(uint256(1), uint256(slot))); // descPtr mapping のキー
         vm.store(address(imprint), mapSlot, bytes32(uint256(0)));
 
-        vm.expectRevert("desc missing");
+        vm.expectRevert(DescriptorFail.selector);
         imprint.tokenImage(1);
     }
 
@@ -296,7 +306,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
 
         // set meta
-        imprint._adminSetMeta(1, 1, 1, "GPT-4o", "SubjectX");
+        // imprint._adminSetMeta(1, 1, 1, "GPT-4o", "SubjectX"); // Removed: _adminSetMeta function no longer exists
 
         string memory uri = imprint.tokenURI(1);
         assertTrue(_startsWith(uri, "data:application/json;base64,"));
@@ -322,7 +332,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         imprint.createEdition(ed, model);
 
         /* --- ストレージ検証 --- */
-        ImprintStorage.EditionHeader memory h = imprint.getEditionHeader(ed);
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(ed);
 
         assertEq(h.editionNo, ed);
         assertEq(h.model, model);
@@ -330,7 +340,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertFalse(h.isSealed);
 
         /* --- 二重作成は revert --- */
-        vm.expectRevert("edition exists");
+        vm.expectRevert(EditionExists.selector);
         imprint.createEdition(ed, model);
     }
 
@@ -342,18 +352,18 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         emit EditionSealed(3);
         imprint.sealEdition(3);
 
-        ImprintStorage.EditionHeader memory h = imprint.getEditionHeader(3);
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(3);
 
         assertTrue(h.isSealed);
 
         /* --- 既に sealed 済みの Edition を再度 seal すると revert --- */
-        vm.expectRevert("already sealed");
+        vm.expectRevert(AlreadySealed.selector);
         imprint.sealEdition(3);
     }
 
     /* ❸ 未作成 Edition を seal すると revert */
     function testSealEditionNonexistentReverts() public {
-        vm.expectRevert("unknown edition");
+        vm.expectRevert(UnknownEdition.selector);
         imprint.sealEdition(999);
     }
 
@@ -366,14 +376,14 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         /* ========== ① mint 前 ========== */
         {
             // seedId = 1 の中身確認
-            ImprintStorage.ImprintSeed memory s1 = imprint.getSeed(1);
+            ImprintStorage.ImprintSeed memory s1 = imprintViews.getSeed(1);
             assertEq(s1.editionNo, 1);
             assertEq(s1.localIndex, 1);
             assertEq(s1.subjectName, "Seed1");
             assertFalse(s1.claimed);
 
             // edition #1 の残数 = 3
-            assertEq(imprint.remainingInEdition(1), 3);
+            assertEq(imprintViews.remainingInEdition(1), 3);
         }
 
         /* ========== ② 2 枚 mint（Seed #1, #2 を claim） ========== */
@@ -381,15 +391,15 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         imprint.mintSeaDrop(address(this), 2);             // tokenId ⇒ 1,2 が発行
 
         /* ⇒ getSeed.claimed が反映されているか */
-        assertTrue(imprint.getSeed(1).claimed);
-        assertTrue(imprint.getSeed(2).claimed);
-        assertFalse(imprint.getSeed(3).claimed);
+        assertTrue(imprintViews.getSeed(1).claimed);
+        assertTrue(imprintViews.getSeed(2).claimed);
+        assertFalse(imprintViews.getSeed(3).claimed);
 
         /* ⇒ remainingInEdition() が 1 になるか */
-        assertEq(imprint.remainingInEdition(1), 1);
+        assertEq(imprintViews.remainingInEdition(1), 1);
 
         /* ⇒ getTokenMeta() が正しいか */
-        ImprintStorage.TokenMeta memory tm = imprint.getTokenMeta(1); // tokenId = 1
+        ImprintStorage.TokenMeta memory tm = imprintViews.getTokenMeta(1); // tokenId = 1
         assertEq(tm.editionNo,   1);
         assertEq(tm.localIndex,  1);
         assertEq(tm.model,       "GPT-4o");
@@ -400,7 +410,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         /* 3 枚すべて mint すると残数は 0 */
         vm.prank(allowedSeaDrop[0]);
         imprint.mintSeaDrop(address(this), 3);
-        assertEq(imprint.remainingInEdition(1), 0);
+        assertEq(imprintViews.remainingInEdition(1), 0);
     }
 
     // function testMintInitialSetsSubjectMeta() public {
@@ -530,7 +540,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         emit WorldCanonSet(mockSubject);
         imprint.setWorldCanon(mockSubject);
         
-        assertEq(imprint.getWorldCanon(), mockSubject);
+        assertEq(imprintViews.getWorldCanon(), mockSubject);
     }
 
     function testSetWorldCanonOnlyOnce() public {
@@ -538,15 +548,15 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         
         // First set should succeed
         imprint.setWorldCanon(mockSubject);
-        assertEq(imprint.getWorldCanon(), mockSubject);
+        assertEq(imprintViews.getWorldCanon(), mockSubject);
         
         // Second set should revert
-        vm.expectRevert("worldCanon already set");
+        vm.expectRevert(WorldCanonAlreadySet.selector);
         imprint.setWorldCanon(address(0x8888));
     }
 
     function testSetWorldCanonZeroAddressReverts() public {
-        vm.expectRevert("zero address");
+        vm.expectRevert(ZeroAddress.selector);
         imprint.setWorldCanon(address(0));
     }
 
@@ -579,7 +589,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     function testMintSeaDropWithoutWorldCanon() public {
         // Ensure worldCanon is not set
-        assertEq(imprint.getWorldCanon(), address(0));
+        assertEq(imprintViews.getWorldCanon(), address(0));
         
         // Mint should succeed without calling Subject
         vm.prank(allowedSeaDrop[0]);
@@ -601,10 +611,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         
         // Owner should succeed
         imprint.setMintPaused(true);
-        assertTrue(imprint.isMintPaused());
+        assertTrue(imprintViews.isMintPaused());
         
         imprint.setMintPaused(false);
-        assertFalse(imprint.isMintPaused());
+        assertFalse(imprintViews.isMintPaused());
     }
 
     function testMintRevertsWhenPaused() public {
@@ -613,7 +623,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         
         // Try to mint
         vm.prank(allowedSeaDrop[0]);
-        vm.expectRevert("minting paused");
+        vm.expectRevert(MintingPaused.selector);
         imprint.mintSeaDrop(address(this), 1);
     }
 
@@ -621,12 +631,12 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         // Set active edition
         imprint.setActiveEdition(1);
         
-        // Close it
-        imprint.closeActiveEdition();
+        // Close it by setting active edition to 0
+        imprint.setActiveEdition(0);
         
         // Try to mint - should fail with "no active edition"
         vm.prank(allowedSeaDrop[0]);
-        vm.expectRevert("no active edition");
+        vm.expectRevert(NoActiveEdition.selector);
         imprint.mintSeaDrop(address(this), 1);
     }
 
@@ -635,82 +645,18 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /*───────────────────────────────────────────────────────────────*/
 
     function testEditionSize() public view {
-        assertEq(imprint.editionSize(1), 3);
-        assertEq(imprint.editionSize(2), 2);
-        assertEq(imprint.editionSize(999), 0); // non-existent edition
+        assertEq(imprintViews.editionSize(1), 3);
+        assertEq(imprintViews.editionSize(2), 2);
+        assertEq(imprintViews.editionSize(999), 0); // non-existent edition
     }
 
     function testEditionSizeAfterSealing() public {
         // Edition size should still be readable after sealing
         // Note: Edition 2 is not sealed in setUp
         imprint.sealEdition(2);
-        assertEq(imprint.editionSize(2), 2);
+        assertEq(imprintViews.editionSize(2), 2);
     }
 
-    /*───────────────────────────────────────────────────────────────*/
-    /*                       Withdrawal Tests                         */
-    /*───────────────────────────────────────────────────────────────*/
-
-    function testWithdrawETHOnlyOwner() public {
-        // Send some ETH to the contract
-        vm.deal(address(imprint), 1 ether);
-        
-        // Non-owner should revert
-        vm.prank(user);
-        vm.expectRevert();
-        imprint.withdraw(payable(user));
-        
-        // Owner should succeed
-        uint256 balanceBefore = address(this).balance;
-        imprint.withdraw(payable(address(this)));
-        assertEq(address(this).balance, balanceBefore + 1 ether);
-        assertEq(address(imprint).balance, 0);
-    }
-
-    function testWithdrawETHRevertsOnZeroAddress() public {
-        vm.deal(address(imprint), 1 ether);
-        vm.expectRevert("zero address");
-        imprint.withdraw(payable(address(0)));
-    }
-
-    function testWithdrawETHRevertsWhenNoBalance() public {
-        vm.expectRevert("no ETH to withdraw");
-        imprint.withdraw(payable(address(this)));
-    }
-
-    function testWithdrawTokenOnlyOwner() public {
-        // Mock ERC20 token
-        MockERC20 token = new MockERC20();
-        token.mint(address(imprint), 1000);
-        
-        // Non-owner should revert
-        vm.prank(user);
-        vm.expectRevert();
-        imprint.withdrawToken(address(token), user);
-        
-        // Owner should succeed
-        uint256 balanceBefore = token.balanceOf(address(this));
-        imprint.withdrawToken(address(token), address(this));
-        assertEq(token.balanceOf(address(this)), balanceBefore + 1000);
-        assertEq(token.balanceOf(address(imprint)), 0);
-    }
-
-    function testWithdrawTokenRevertsOnZeroAddress() public {
-        MockERC20 token = new MockERC20();
-        token.mint(address(imprint), 1000);
-        
-        vm.expectRevert("zero token address");
-        imprint.withdrawToken(address(0), address(this));
-        
-        vm.expectRevert("zero to address");
-        imprint.withdrawToken(address(token), address(0));
-    }
-
-    function testWithdrawTokenRevertsWhenNoBalance() public {
-        MockERC20 token = new MockERC20();
-        vm.expectRevert("no tokens to withdraw");
-        imprint.withdrawToken(address(token), address(this));
-    }
 
     /*───────────────────────────────────────────────────────────────*/
     /*                    SupportsInterface Tests                     */
@@ -729,18 +675,3 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     }
 }
 
-// Mock ERC20 for testing
-contract MockERC20 {
-    mapping(address => uint256) public balanceOf;
-    
-    function mint(address to, uint256 amount) external {
-        balanceOf[to] += amount;
-    }
-    
-    function transfer(address to, uint256 amount) external returns (bool) {
-        require(balanceOf[msg.sender] >= amount, "insufficient balance");
-        balanceOf[msg.sender] -= amount;
-        balanceOf[to] += amount;
-        return true;
-    }
-}
