@@ -47,11 +47,11 @@ contract Subject is ERC721, Ownable {
 
 
     function syncFromImprint(
-        string calldata subjectName,
+        string calldata subjectNameParam,
         uint256 imprintId,
         uint64  ts
     ) external onlyImprint {
-        bytes32 h       = subjectName.normHash();
+        bytes32 h       = subjectNameParam.normHash();
         uint256 idPlus1 = _nameHashToIdPlus1[h];
         uint256 tokenId;
 
@@ -59,7 +59,7 @@ contract Subject is ERC721, Ownable {
         if (idPlus1 == 0) {
             tokenId = totalSupply;              // 次の ID
             _mint(owner(), tokenId);            // Owner (= キュレーター) 保有で発行
-            _subjectNames[tokenId]   = subjectName;
+            _subjectNames[tokenId]   = subjectNameParam;
             _nameHashToIdPlus1[h]    = tokenId + 1; // +1 オフセット保存
             subjectMeta[tokenId].addedEditionNo = 0; // 動的追加なので 0
             totalSupply += 1;
