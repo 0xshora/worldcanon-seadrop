@@ -72,4 +72,12 @@ contract ImprintViews {
         return abi.decode(data, (uint256));
     }
 
+    function descPtr(uint256 tokenId) external view returns (address) {
+        (bool success, bytes memory data) = imprint.staticcall(
+            abi.encodeWithSelector(0x3d3728b6, tokenId) // descPtr selector
+        );
+        require(success, "call failed");
+        return abi.decode(data, (address));
+    }
+
 }
