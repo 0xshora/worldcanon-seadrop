@@ -65,7 +65,6 @@ library ImprintStorage {
 
         /* --- Globals --- */
         address  worldCanon;   // Subject コントラクト (set once)
-        uint64   maxSupply;    // 0 = unlimited
         bool     mintPaused;   // Mint一時停止フラグ
     }
 
@@ -126,29 +125,18 @@ contract Imprint is ERC721SeaDropUpgradeable {
     /* ──────────────── events ──────────────── */
     event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
     event EditionSealed(uint64 indexed editionNo);
-    event SeedsAdded(uint64 indexed editionNo, uint256 count);
-    event ImprintClaimed(uint256 indexed seedId, uint256 indexed tokenId, address indexed to);
     event ActiveEditionChanged(uint64 indexed newEdition);
     event WorldCanonSet(address indexed worldCanon);
-    event MintPausedSet(bool paused);
 
     /* ──────────────── init ──────────────── */
-    function __Imprint_init(
-        string memory name,
-        string memory symbol,
-        address[] memory allowedSeaDrop
-    ) internal onlyInitializing {
-        // Initialize ERC721SeaDrop with name, symbol, and allowed SeaDrop
-        __ERC721SeaDrop_init(name, symbol, allowedSeaDrop);
-    }
-
     function initializeImprint(
         string memory name,
         string memory symbol,
         address[] memory allowedSeaDrop,
         address initialOwner
     ) external initializer initializerERC721A {
-        __Imprint_init(name, symbol, allowedSeaDrop);
+        // Initialize ERC721SeaDrop with name, symbol, and allowed SeaDrop
+        __ERC721SeaDrop_init(name, symbol, allowedSeaDrop);
         if (initialOwner == address(0)) revert ZeroAddress();
         _transferOwnership(initialOwner);   // OwnableUpgradeable
     }
@@ -224,7 +212,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
             }
         }
 
-        emit SeedsAdded(batchEdition, n);
     }
 
 
@@ -292,7 +279,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
                 subjectName: s.subjectName
             });
 
-            emit ImprintClaimed(seedId, tokenId, to);
             }
         }
 
@@ -363,7 +349,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
     function setMintPaused(bool paused) external onlyOwner {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         st.mintPaused = paused;
-        emit MintPausedSet(paused);
     }
 
 
