@@ -108,7 +108,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         imprintViews = new ImprintViews(address(imprint));
         
         // Deploy and set ImprintDescriptor
-        imprintDescriptor = new ImprintDescriptor(address(imprint));
+        imprintDescriptor = new ImprintDescriptor(address(imprint), address(imprintViews));
         imprint.setDescriptor(address(imprintDescriptor));
 
         imprint.setMaxSupply(1000);

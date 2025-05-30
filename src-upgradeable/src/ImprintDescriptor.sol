@@ -5,32 +5,29 @@ import { SSTORE2 } from "../lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 import { Strings } from "openzeppelin-contracts/utils/Strings.sol";
 import { Base64 } from "openzeppelin-contracts/utils/Base64.sol";
 import { IImprintDescriptor } from "./interfaces/IImprintDescriptor.sol";
+import { ImprintStorage } from "./Imprint.sol";
 
-struct TokenMeta {
-    uint64 editionNo;
-    uint16 localIndex;
-    string model;
-    string subjectName;
-}
-
-interface IImprint {
+interface IImprintViews {
     function descPtr(uint256 tokenId) external view returns (address);
-    function getTokenMeta(uint256 tokenId) external view returns (TokenMeta memory);
+    function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory);
 }
 
 contract ImprintDescriptor is IImprintDescriptor {
     using Strings for uint256;
 
     address public immutable imprint;
+    address public immutable imprintViews;
     address public immutable svgPrefixPtr;
     address public immutable svgSuffixPtr;
     
     // Storage mapping for descPtr that Imprint can write to
     mapping(uint256 => address) public descPtr;
 
-    constructor(address _imprint) {
+    constructor(address _imprint, address _imprintViews) {
         require(_imprint != address(0), "zero address");
+        require(_imprintViews != address(0), "zero address");
         imprint = _imprint;
+        imprintViews = _imprintViews;
         
         // Initialize SVG templates
         svgPrefixPtr = SSTORE2.write(
@@ -51,8 +48,8 @@ contract ImprintDescriptor is IImprintDescriptor {
     }
 
     function tokenImage(uint256 tokenId) external view override returns (string memory) {
-        IImprint imp = IImprint(imprint);
-        address ptr = imp.descPtr(tokenId);
+        IImprintViews views = IImprintViews(imprintViews);
+        address ptr = views.descPtr(tokenId);
         require(ptr != address(0), "desc missing");
 
         // Build SVG
@@ -71,11 +68,11 @@ contract ImprintDescriptor is IImprintDescriptor {
     }
 
     function tokenURI(uint256 tokenId) external view override returns (string memory) {
-        IImprint imp = IImprint(imprint);
-        address ptr = imp.descPtr(tokenId);
+        IImprintViews views = IImprintViews(imprintViews);
+        address ptr = views.descPtr(tokenId);
         require(ptr != address(0), "desc missing");
 
-        TokenMeta memory tokenMeta = imp.getTokenMeta(tokenId);
+        ImprintStorage.TokenMeta memory tokenMeta = views.getTokenMeta(tokenId);
         require(bytes(tokenMeta.model).length != 0, "meta missing");
 
         // Build SVG
