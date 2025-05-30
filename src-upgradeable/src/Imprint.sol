@@ -110,8 +110,6 @@ error TokenNonexistent();
 error DescriptorUnset();
 error DescriptorFail();
 error WorldCanonAlreadySet();
-error DescMissing();
-error MetaMissing();
 
 /*
  * @notice This contract uses ERC721SeaDrop,
@@ -379,7 +377,18 @@ contract Imprint is ERC721SeaDropUpgradeable {
     }
 
 
-    /*─────────────── Minimal Public Getters ───────────────*/
+    /*─────────────── Minimal Storage Access ───────────────*/
+    // Optimized getters to support ImprintViews and ImprintDescriptor
+    
+    function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory) {
+        return ImprintStorage.layout().meta[tokenId];
+    }
+
+    function descPtr(uint256 tokenId) external view returns (address) {
+        return ImprintStorage.layout().descPtr[tokenId];
+    }
+    
+    // Storage access helpers for ImprintViews - more gas efficient than full getters
     function getEditionHeader(uint64 editionNo) external view returns (ImprintStorage.EditionHeader memory) {
         return ImprintStorage.layout().editionHeaders[editionNo];
     }
@@ -388,29 +397,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
         return ImprintStorage.layout().seeds[seedId];
     }
 
-    function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory) {
-        return ImprintStorage.layout().meta[tokenId];
-    }
-
-    // For descriptor compatibility - returns individual fields
-    function descPtr(uint256 tokenId) external view returns (address) {
-        return ImprintStorage.layout().descPtr[tokenId];
-    }
-
-    function remainingInEdition(uint64 editionNo) external view returns (uint256 remaining) {
-        ImprintStorage.Layout storage st = ImprintStorage.layout();
-        uint256 cursor = st.activeCursor;
-        uint256 last = st.lastSeedId[editionNo];
-        if (cursor == 0 || cursor > last) return 0;
-
-        unchecked {
-            for (uint256 i = cursor; i <= last; ++i) {
-                if (!st.seeds[i].claimed) ++remaining;
-            }
-        }
-    }
-
-    // Additional minimal getters for ImprintViews compatibility
     function getWorldCanon() external view returns (address) {
         return ImprintStorage.layout().worldCanon;
     }
@@ -422,9 +408,16 @@ contract Imprint is ERC721SeaDropUpgradeable {
     function editionSize(uint64 ed) external view returns (uint256) {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         uint256 first = st.firstSeedId[ed];
-        uint256 last = st.lastSeedId[ed];
-        if (first == 0 || last == 0) return 0;
-        return last - first + 1;
+        if (first == 0) return 0;
+        return st.lastSeedId[ed] - first + 1;
+    }
+
+    function remainingInEdition(uint64 editionNo) external view returns (uint256) {
+        ImprintStorage.Layout storage st = ImprintStorage.layout();
+        uint256 cursor = st.activeCursor;
+        uint256 last = st.lastSeedId[editionNo];
+        if (cursor == 0 || cursor > last) return 0;
+        return last - cursor + 1;
     }
 
     uint256[51] private __gap;
