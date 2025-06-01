@@ -9,14 +9,24 @@ remappings = [
     'seadrop/=src/',
 ]
 optimizer = true
-optimizer_runs = 200
+optimizer_runs = 1_000_000
 via_ir = true
 ignored_error_codes = []
 bytecode_hash = "none"
 bytecode_metadata = "none"
 
-[profile.upgradeable]
-src = 'src-upgradeable/src/'
+# for now, we need to construct additional profiles manually
+# cf. https://github.com/foundry-rs/foundry/pull/8668
+additional_compiler_profiles = [
+    { name = "default", optimizer_runs = 1_000_000 },
+    { name = "runs_100", optimizer_runs = 100 }
+]
+
+# Some optimizer runs may be reduced below the specified max_optimizer_runs
+# during testing due to combined restrictions.
+compilation_restrictions = [
+    { paths = "src-upgradeable/src/Imprint.sol", max_optimizer_runs = 100 }
+]
 
 [profile.ir_inspect]
 test = 'src'
@@ -24,5 +34,3 @@ test = 'src'
 [rpc_endpoints]
 goerli = '${GOERLI_RPC_URL}'
 mainnet = '${ETHEREUM_RPC_URL}'
-
-# See more config options https://github.com/foundry-rs/foundry/tree/master/config

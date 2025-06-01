@@ -3,7 +3,8 @@ pragma solidity ^0.8.17;
 
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
-import { Imprint, ImprintStorage, SeedInput, DescMissing, DescriptorFail, MintingPaused, UnknownEdition, ZeroAddress, EditionExists, AlreadySealed, WorldCanonAlreadySet, NoActiveEdition } from "../../src-upgradeable/src/Imprint.sol";
+import { Imprint } from "../../src-upgradeable/src/Imprint.sol";
+import { ImprintStorage, SeedInput, ZeroAddress, InvalidEditionNo, EmptyModel, EditionExists, UnknownEdition, AlreadySealed, EmptyInput, MixedEdition, EmptyDesc, EditionMissing, EditionAlreadySealed, DuplicateLocalIdx, EditionNotSealed, NoSeeds, MintingPaused, NoActiveEdition, SoldOut, TokenNonexistent, DescriptorUnset, DescriptorFail, WorldCanonAlreadySet } from "../../src-upgradeable/src/ImprintLib.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
 import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
 import { IImprintDescriptor } from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
