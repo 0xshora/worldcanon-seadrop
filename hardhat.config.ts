@@ -53,15 +53,15 @@ const config: HardhatUserConfig = {
       url: process.env.NETWORK_RPC ?? "",
     },
     sepolia: {
-      url: process.env.ETH_SEPOLIA_RPC_URL || "",
+      url: process.env.ETH_SEPOLIA_RPC_URL ?? "",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     base: {
-      url: process.env.BASE_RPC_URL || "",
+      url: process.env.BASE_RPC_URL ?? "",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
     "base-sepolia": {
-      url: process.env.BASE_SEPOLIA_RPC_URL || "",
+      url: process.env.BASE_SEPOLIA_RPC_URL ?? "",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
