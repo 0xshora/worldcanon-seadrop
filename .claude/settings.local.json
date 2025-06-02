@@ -16,7 +16,8 @@
       "Bash(forge build:*)",
       "Bash(forge clean:*)",
       "Bash(cast sig:*)",
-      "Bash(cast keccak:*)"
+      "Bash(cast keccak:*)",
+      "Bash(gh issue list:*)"
     ]
   },
   "enableAllProjectMcpServers": false
