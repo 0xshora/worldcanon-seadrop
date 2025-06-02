@@ -9,23 +9,35 @@ async function deployToBase() {
   console.log("\n1. Deploying Subject...");
   const Subject = await ethers.getContractFactory("Subject");
   
+  console.log("Creating Subject deployment transaction...");
   const subjectToken = await Subject.deploy("World Canon Subjects", "WCSBJ");
   
+  console.log("Waiting for Subject deployment...");
   await subjectToken.deployed();
   console.log("Subject deployed to:", subjectToken.address);
   
   // トランザクションの確認を待つ
-  await subjectToken.deployTransaction.wait(1);
+  console.log("Waiting for Subject transaction confirmation...");
+  await subjectToken.deployTransaction.wait(2);
   
   // Deploy ImprintLib library first
   console.log("\n2. Deploying ImprintLib library...");
   const ImprintLib = await ethers.getContractFactory("ImprintLib");
+  
+  // Get current gas price for debugging
+  const gasPrice = await ethers.provider.getGasPrice();
+  console.log("Current gas price:", ethers.utils.formatUnits(gasPrice, "gwei"), "gwei");
+  
+  console.log("Creating ImprintLib deployment transaction...");
   const imprintLib = await ImprintLib.deploy();
+  
+  console.log("Waiting for ImprintLib deployment...");
   await imprintLib.deployed();
   console.log("ImprintLib deployed to:", imprintLib.address);
   
   // トランザクションの確認を待つ
-  await imprintLib.deployTransaction.wait(1);
+  console.log("Waiting for ImprintLib transaction confirmation...");
+  await imprintLib.deployTransaction.wait(2);
 
   // Deploy Imprint
   console.log("\n3. Deploying Imprint...");
@@ -64,13 +76,24 @@ async function deployToBase() {
     // Subject is not upgradeable, so no proxy/admin/implementation addresses
   };
   
-  const imprintAddresses = {
-    proxy: imprintToken.address,
-    admin: await upgrades.erc1967.getAdminAddress(imprintToken.address),
-    implementation: await upgrades.erc1967.getImplementationAddress(
-      imprintToken.address
-    ),
-  };
+  // Get proxy addresses with error handling
+  let imprintAddresses;
+  try {
+    imprintAddresses = {
+      proxy: imprintToken.address,
+      admin: await upgrades.erc1967.getAdminAddress(imprintToken.address),
+      implementation: await upgrades.erc1967.getImplementationAddress(
+        imprintToken.address
+      ),
+    };
+  } catch (error) {
+    console.log("Warning: Could not retrieve proxy addresses, using fallback...");
+    imprintAddresses = {
+      proxy: imprintToken.address,
+      admin: "Error retrieving admin address",
+      implementation: "Error retrieving implementation address",
+    };
+  }
   
   const deploymentInfo = {
     network: "base-sepolia",

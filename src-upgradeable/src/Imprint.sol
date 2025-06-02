@@ -132,5 +132,6 @@ contract Imprint is ERC721SeaDropUpgradeable {
         return ImprintLib.getEditionSize(ed);
     }
 
+
     uint256[50] private __gap;
 }

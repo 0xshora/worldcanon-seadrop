@@ -1,9 +1,0 @@
-{
-  "name": "worldcanon-seadrop-upgradeable",
-  "version": "1.0.0",
-  "description": "Upgradeable contracts for World Canon SeaDrop",
-  "scripts": {
-    "compile": "hardhat compile",
-    "deploy:base-sepolia": "hardhat run scripts/deploy_base.ts --network base-sepolia"
-  }
-}

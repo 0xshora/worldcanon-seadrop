@@ -86,3 +86,16 @@ yarn lint:fix
 - オプティマイザー実行回数: 1,000,000（デプロイガス効率のため）
 - Via IR: Foundryで有効、Hardhatで無効
 - SeaDropデプロイアドレス: `0x00005EA00Ac477B1030CE78506496e8C2dE24bf5`（すべてのチェーンで同じ）
+
+## 重要な開発ガイドライン
+
+### importパスの取り扱い
+**⚠️ 重要**: コントラクト内のimportパスは可能な限り変更しないでください。
+- importパスはセンシティブな問題であり、変更するとFoundryとHardhatの両方の互換性に影響します
+- パス解決の問題がある場合は、remappings.txtファイルの調整で対応してください
+- コントラクトのimportパスを変更する場合は、事前に十分な検討と調査が必要です
+
+### remappings.txtの優先順位
+- src-upgradeable/remappings.txt: アップグレード可能なコントラクト専用のマッピング
+- ルートのremappings.txt: Foundry用のマッピング
+- Hardhatでは、hardhat.config.tsのpreprocessオプションでremappingsを適用
