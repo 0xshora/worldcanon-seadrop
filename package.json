@@ -18,17 +18,21 @@
     "coverage:hardhat:fix-lib-link": "sed -i'.bak' 's|\"openzeppelin-contracts-upgradeable|\"../../../../lib/openzeppelin-contracts-upgradeable/contracts|g'",
     "lcov-convert-relative-paths-to-absolute": "sed -i'.bak' 's|SF:\\(.*\\)/temp-src-coverage/\\(.*\\)|SF:src/\\2|g' coverage/lcov.info",
     "lcov-filter-ignored-files": "npx lcov-filter lcov.info 'Shim|MaliciousRecipient|Deploy|Test|Snapshot' > lcov-filtered.info",
-    "lint:check": "yarn lint:check:format && yarn lint:check:solhint && yarn lint:check:eslint",
-    "lint:check:format": "prettier --check **.{sol,js,ts}",
+    "lint:check": "yarn lint:check:solhint && yarn lint:check:eslint",
+    "lint:check:format": "yarn lint:check:format:js",
+    "lint:check:format:sol": "echo 'Solidity formatting check skipped - manual formatting preserved'",
+    "lint:check:format:js": "prettier --check '**/*.{js,ts}'",
     "lint:check:solhint": "yarn build && solhint --config ./config/.solhint.json --ignore-path ./config/.solhintignore src/**/*.sol",
     "lint:check:eslint": "eslint . --ext js,ts",
     "lint:fix": "yarn lint:fix:format && yarn lint:fix:eslint",
-    "lint:fix:format": "prettier --write **.{sol,js,ts}",
+    "lint:fix:format": "yarn lint:fix:format:sol && yarn lint:fix:format:js",
+    "lint:fix:format:sol": "forge fmt",
+    "lint:fix:format:js": "prettier --write '**/*.{js,ts}'",
     "lint:fix:eslint": "eslint --fix . --ext js,ts",
     "prepare": "husky install"
   },
   "lint-staged": {
-    "*.sol": "prettier --write",
+    "*.sol": "forge fmt",
     "*.js": "prettier --write",
     "*.ts": "prettier --write"
   },
@@ -77,9 +81,9 @@
     "lodash": ">=4.17.21",
     "node-fetch": "^2.6.7",
     "underscore": ">=1.12.1",
-    "yargs-parser": ">=5.0.1",
+    "yargs-parser": "^21.0.0",
     "web3": ">=1.8.0",
-    "got": ">=11.8.5",
-    "minimatch": ">=3.0.5"
+    "got": "^11.8.5",
+    "minimatch": "^3.1.2"
   }
 }

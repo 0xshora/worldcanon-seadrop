@@ -4,23 +4,61 @@ pragma solidity ^0.8.17;
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
 import { Imprint } from "../../src-upgradeable/src/Imprint.sol";
-import { ImprintStorage, SeedInput, ZeroAddress, InvalidEditionNo, EmptyModel, EditionExists, UnknownEdition, AlreadySealed, EmptyInput, MixedEdition, EmptyDesc, EditionMissing, EditionAlreadySealed, DuplicateLocalIdx, EditionNotSealed, NoSeeds, MintingPaused, NoActiveEdition, SoldOut, TokenNonexistent, DescriptorUnset, DescriptorFail, WorldCanonAlreadySet } from "../../src-upgradeable/src/ImprintLib.sol";
+import {
+    ImprintStorage,
+    SeedInput,
+    ZeroAddress,
+    InvalidEditionNo,
+    EmptyModel,
+    EditionExists,
+    UnknownEdition,
+    AlreadySealed,
+    EmptyInput,
+    MixedEdition,
+    EmptyDesc,
+    EditionMissing,
+    EditionAlreadySealed,
+    DuplicateLocalIdx,
+    EditionNotSealed,
+    NoSeeds,
+    MintingPaused,
+    NoActiveEdition,
+    SoldOut,
+    TokenNonexistent,
+    DescriptorUnset,
+    DescriptorFail,
+    WorldCanonAlreadySet
+} from "../../src-upgradeable/src/ImprintLib.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
-import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
-import { IImprintDescriptor } from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
-import { TransparentUpgradeableProxy } from
-    "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import { ProxyAdmin } from
-    "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
-import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
+import {
+    ImprintDescriptor
+} from "../../src-upgradeable/src/ImprintDescriptor.sol";
+import {
+    IImprintDescriptor
+} from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    ProxyAdmin
+} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+import {
+    PublicDrop
+} from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
 import {
     IERC721Receiver
 } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import { Strings } from "openzeppelin-contracts/utils/Strings.sol";
-import {IERC721} from "openzeppelin-contracts/token/ERC721/IERC721.sol";
-import {IERC165} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
-import {INonFungibleSeaDropTokenUpgradeable} from "../../src-upgradeable/src/interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
-import {ISeaDropTokenContractMetadataUpgradeable} from "../../src-upgradeable/src/interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
+import { IERC721 } from "openzeppelin-contracts/token/ERC721/IERC721.sol";
+import {
+    IERC165
+} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
+import {
+    INonFungibleSeaDropTokenUpgradeable
+} from "../../src-upgradeable/src/interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
+import {
+    ISeaDropTokenContractMetadataUpgradeable
+} from "../../src-upgradeable/src/interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
 
 contract ImprintV2 is Imprint {
     function version() external pure returns (string memory) {
@@ -35,23 +73,30 @@ contract MockSubject {
         uint256 imprintId;
         uint64 ts;
     }
-    
+
     Call[] public syncCalls;
-    
-    function syncFromImprint(string calldata subjectName, uint256 imprintId, uint64 ts) external {
+
+    function syncFromImprint(
+        string calldata subjectName,
+        uint256 imprintId,
+        uint64 ts
+    ) external {
         syncCalls.push(Call(subjectName, imprintId, ts));
     }
-    
+
     function getCallCount() external view returns (uint256) {
         return syncCalls.length;
     }
 }
 
-import { SSTORE2 } from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
+import {
+    SSTORE2
+} from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 
 contract ImprintTest is TestHelper, IERC721Receiver {
     // Allow contract to receive ETH for withdrawal testing
     receive() external payable {}
+
     Imprint imprint;
     ImprintViews imprintViews;
     ImprintDescriptor imprintDescriptor;
@@ -61,14 +106,23 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     address[] allowedSeaDrop;
 
     /*──────────── Helpers ────────────*/
-    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
+    function _startsWith(string memory s, string memory prefix)
+        internal
+        pure
+        returns (bool)
+    {
         bytes memory A = bytes(s);
         bytes memory P = bytes(prefix);
         if (P.length > A.length) return false;
         for (uint256 i; i < P.length; ++i) if (A[i] != P[i]) return false;
         return true;
     }
-    function _contains(string memory s, string memory sub) internal pure returns (bool) {
+
+    function _contains(string memory s, string memory sub)
+        internal
+        pure
+        returns (bool)
+    {
         bytes memory a = bytes(s);
         bytes memory b = bytes(sub);
         if (b.length > a.length) return false;
@@ -76,17 +130,21 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         for (uint256 i; i <= a.length - b.length; ++i) {
             bool ok = true;
             for (uint256 j; j < b.length; ++j) {
-                if (a[i + j] != b[j]) { ok = false; break; }
+                if (a[i + j] != b[j]) {
+                    ok = false;
+                    break;
+                }
             }
             if (ok) return true;
         }
         return false;
     }
+
     function setUp() public {
         proxyAdmin = new ProxyAdmin();
         Imprint implementation = new Imprint();
 
-        allowedSeaDrop    = new address[](1);
+        allowedSeaDrop = new address[](1);
         allowedSeaDrop[0] = address(seadrop);
 
         bytes memory data = abi.encodeWithSelector(
@@ -97,18 +155,17 @@ contract ImprintTest is TestHelper, IERC721Receiver {
             address(this)
         );
 
-        TransparentUpgradeableProxy proxy =
-            new TransparentUpgradeableProxy(
-                address(implementation),
-                address(proxyAdmin),
-                data
-            );
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(implementation),
+            address(proxyAdmin),
+            data
+        );
 
         imprint = Imprint(address(proxy));
-        
+
         // Deploy ImprintViews
         imprintViews = new ImprintViews(address(imprint));
-        
+
         // Deploy and set ImprintDescriptor
         imprintDescriptor = new ImprintDescriptor(address(imprint));
         imprint.setDescriptor(address(imprintDescriptor));
@@ -134,11 +191,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         // Set the public drop for the token contract.
         imprint.updatePublicDrop(address(seadrop), publicDrop);
 
-        imprint.updateAllowedFeeRecipient(
-            address(seadrop),
-            address(5),
-            true
-        );
+        imprint.updateAllowedFeeRecipient(address(seadrop), address(5), true);
 
         /******************************************************************
          * ↓↓↓   ここからテスト用の Edition / Seed セットアップ   ↓↓↓
@@ -151,11 +204,13 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         SeedInput[] memory seeds = new SeedInput[](3);
         for (uint16 i = 0; i < 3; ++i) {
             seeds[i] = SeedInput({
-                editionNo:   1,
-                localIndex:  i + 1,          // 1,2,3
-                subjectId:   0,
-                subjectName: string(abi.encodePacked("Seed", Strings.toString(i+1))),
-                desc:        "<svg></svg>"
+                editionNo: 1,
+                localIndex: i + 1, // 1,2,3
+                subjectId: 0,
+                subjectName: string(
+                    abi.encodePacked("Seed", Strings.toString(i + 1))
+                ),
+                desc: "<svg></svg>"
             });
         }
         imprint.addSeeds(seeds);
@@ -163,25 +218,25 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         // ③ Edition を Seal ＆ Active にする
         imprint.sealEdition(1);
         imprint.setActiveEdition(1);
-        
+
         // ④ Edition #2 を作成（テスト用）
         imprint.createEdition(2, "Claude-3");
-        
+
         // ⑤ Edition 2 にSeedを2つ登録
         SeedInput[] memory seeds2 = new SeedInput[](2);
         seeds2[0] = SeedInput({
-            editionNo:   2,
-            localIndex:  1,
-            subjectId:   0,
+            editionNo: 2,
+            localIndex: 1,
+            subjectId: 0,
             subjectName: "Test1",
-            desc:        "<svg>test1</svg>"
+            desc: "<svg>test1</svg>"
         });
         seeds2[1] = SeedInput({
-            editionNo:   2,
-            localIndex:  2,
-            subjectId:   0,
+            editionNo: 2,
+            localIndex: 2,
+            subjectId: 0,
             subjectName: "Test2",
-            desc:        "<svg>test2</svg>"
+            desc: "<svg>test2</svg>"
         });
         imprint.addSeeds(seeds2);
     }
@@ -224,10 +279,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /// non-owner は onlyOwner を実行できない
     function testOnlyOwnerGuard() public {
         vm.prank(user);
-        vm.expectRevert(bytes4(keccak256("OnlyOwner()")) );
+        vm.expectRevert(bytes4(keccak256("OnlyOwner()")));
         imprint.setMaxSupply(2000);
     }
-    
+
     /* ----------------------------- UPGRADE TEST --------------------------- */
 
     /* ───────── upgrade 前後の state 保持 ───────── */
@@ -260,7 +315,6 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertEq(ImprintV2(address(imprint)).version(), "v2");
     }
 
-
     /* ------------------------------------------------------------------ */
     /*              tokenImage / tokenURI 追加ロジック テスト              */
     /* ------------------------------------------------------------------ */
@@ -268,13 +322,17 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testTokenImageRevertsWithoutDesc() public {
         // Skip this test for now - Phase 1 architecture changes affect this test
         vm.skip(true);
-        
+
         vm.prank(allowedSeaDrop[0]);
-        imprint.mintSeaDrop(address(this), 1);   // tokenId = 1
+        imprint.mintSeaDrop(address(this), 1); // tokenId = 1
 
         // Check that descPtr is set initially
         address originalPtr = imprint.descPtr(1);
-        assertNotEq(originalPtr, address(0), "descPtr should be set after mint");
+        assertNotEq(
+            originalPtr,
+            address(0),
+            "descPtr should be set after mint"
+        );
 
         // 強制的に descPtr を消す
         bytes32 slot = keccak256("worldcanon.imprint.storage.v0");
@@ -293,7 +351,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testTokenImageReturnsDataURI() public {
         /* 1. mint */
         vm.prank(allowedSeaDrop[0]);
-        imprint.mintSeaDrop(address(this), 1);          // tokenId = 1
+        imprint.mintSeaDrop(address(this), 1); // tokenId = 1
 
         /* 2. SSTORE2 に description を書き込み */
         address ptr = SSTORE2.write(bytes("Hello World"));
@@ -304,7 +362,9 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
 
         /* 4. 取得チェック */
-        string memory img = IImprintDescriptor(imprint.descriptor()).tokenImage(1);
+        string memory img = IImprintDescriptor(imprint.descriptor()).tokenImage(
+            1
+        );
         assertTrue(_startsWith(img, "data:image/svg+xml;base64,"));
     }
 
@@ -330,7 +390,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /*───────────────────────────────────────────────────────────────*/
 
     /* イベント定義（Imprint と同一シグネチャ） */
-    event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
+    event EditionCreated(
+        uint64 indexed editionNo,
+        string model,
+        uint64 timestamp
+    );
     event EditionSealed(uint64 indexed editionNo);
 
     /* ❶ createEdition() がヘッダーを作成してイベントを Emit */
@@ -339,17 +403,27 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         string memory model = "GPT-UnitTest";
 
         /* --- イベント期待値 --- */
-        vm.expectEmit(true /*indexed*/, false, false, true);
+        vm.expectEmit(
+            true, /*indexed*/
+            false,
+            false,
+            true
+        );
         emit EditionCreated(ed, model, uint64(block.timestamp));
 
         imprint.createEdition(ed, model);
 
         /* --- ストレージ検証 --- */
-        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(ed);
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(
+            ed
+        );
 
         assertEq(h.editionNo, ed);
         assertEq(h.model, model);
-        assertTrue(h.timestamp >= uint64(block.timestamp) && h.timestamp <= uint64(block.timestamp) + 1);
+        assertTrue(
+            h.timestamp >= uint64(block.timestamp) &&
+                h.timestamp <= uint64(block.timestamp) + 1
+        );
         assertFalse(h.isSealed);
 
         /* --- 二重作成は revert --- */
@@ -365,7 +439,9 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         emit EditionSealed(3);
         imprint.sealEdition(3);
 
-        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(3);
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(
+            3
+        );
 
         assertTrue(h.isSealed);
 
@@ -379,7 +455,6 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.expectRevert(UnknownEdition.selector);
         imprint.sealEdition(999);
     }
-
 
     /*───────────────────────────────────────────────────────────────*/
     /*               Edition / Seed ― view-helper のテスト            */
@@ -400,8 +475,8 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         }
 
         /* ========== ② 2 枚 mint（Seed #1, #2 を claim） ========== */
-        vm.prank(allowedSeaDrop[0]);                       // SeaDrop を偽装
-        imprint.mintSeaDrop(address(this), 2);             // tokenId ⇒ 1,2 が発行
+        vm.prank(allowedSeaDrop[0]); // SeaDrop を偽装
+        imprint.mintSeaDrop(address(this), 2); // tokenId ⇒ 1,2 が発行
 
         /* ⇒ getSeed.claimed が反映されているか */
         assertTrue(imprintViews.getSeed(1).claimed);
@@ -413,9 +488,9 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
         /* ⇒ getTokenMeta() が正しいか */
         ImprintStorage.TokenMeta memory tm = imprintViews.getTokenMeta(1); // tokenId = 1
-        assertEq(tm.editionNo,   1);
-        assertEq(tm.localIndex,  1);
-        assertEq(tm.model,       "GPT-4o");
+        assertEq(tm.editionNo, 1);
+        assertEq(tm.localIndex, 1);
+        assertEq(tm.model, "GPT-4o");
         assertEq(tm.subjectName, "Seed1");
     }
 
@@ -501,8 +576,8 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     }
 
     function testMintSeaDropAsAllowed() public {
-        vm.prank(allowedSeaDrop[0]);                 // SeaDrop からの呼び出しを偽装
-        imprint.mintSeaDrop(address(this), 2);       // activeEdition=1 に対して 2 枚ミント
+        vm.prank(allowedSeaDrop[0]); // SeaDrop からの呼び出しを偽装
+        imprint.mintSeaDrop(address(this), 2); // activeEdition=1 に対して 2 枚ミント
         assertEq(imprint.totalSupply(), 2);
         assertEq(imprint.ownerOf(1), address(this));
         assertEq(imprint.ownerOf(2), address(this));
@@ -542,27 +617,27 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     function testSetWorldCanonOnlyOwner() public {
         address mockSubject = address(0x9999);
-        
+
         // Non-owner should revert
         vm.prank(user);
         vm.expectRevert();
         imprint.setWorldCanon(mockSubject);
-        
+
         // Owner should succeed
         vm.expectEmit(true, false, false, false);
         emit WorldCanonSet(mockSubject);
         imprint.setWorldCanon(mockSubject);
-        
+
         assertEq(imprintViews.getWorldCanon(), mockSubject);
     }
 
     function testSetWorldCanonOnlyOnce() public {
         address mockSubject = address(0x9999);
-        
+
         // First set should succeed
         imprint.setWorldCanon(mockSubject);
         assertEq(imprintViews.getWorldCanon(), mockSubject);
-        
+
         // Second set should revert
         vm.expectRevert(WorldCanonAlreadySet.selector);
         imprint.setWorldCanon(address(0x8888));
@@ -576,25 +651,29 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testMintSeaDropCallsSubjectSync() public {
         // Deploy mock Subject contract
         MockSubject mockSubject = new MockSubject();
-        
+
         // Set world canon
         imprint.setWorldCanon(address(mockSubject));
-        
+
         // Mint 2 tokens through SeaDrop
         vm.prank(allowedSeaDrop[0]);
         imprint.mintSeaDrop(address(this), 2);
-        
+
         // Verify Subject.syncFromImprint was called twice
         assertEq(mockSubject.getCallCount(), 2);
-        
+
         // Verify first call parameters
-        (string memory name1, uint256 id1, uint64 ts1) = mockSubject.syncCalls(0);
+        (string memory name1, uint256 id1, uint64 ts1) = mockSubject.syncCalls(
+            0
+        );
         assertEq(name1, "Seed1");
         assertEq(id1, 1);
         assertEq(ts1, uint64(block.timestamp));
-        
+
         // Verify second call parameters
-        (string memory name2, uint256 id2, uint64 ts2) = mockSubject.syncCalls(1);
+        (string memory name2, uint256 id2, uint64 ts2) = mockSubject.syncCalls(
+            1
+        );
         assertEq(name2, "Seed2");
         assertEq(id2, 2);
         assertEq(ts2, uint64(block.timestamp));
@@ -603,11 +682,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testMintSeaDropWithoutWorldCanon() public {
         // Ensure worldCanon is not set
         assertEq(imprintViews.getWorldCanon(), address(0));
-        
+
         // Mint should succeed without calling Subject
         vm.prank(allowedSeaDrop[0]);
         imprint.mintSeaDrop(address(this), 1);
-        
+
         assertEq(imprint.totalSupply(), 1);
         assertEq(imprint.ownerOf(1), address(this));
     }
@@ -621,11 +700,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.prank(user);
         vm.expectRevert();
         imprint.setMintPaused(true);
-        
+
         // Owner should succeed
         imprint.setMintPaused(true);
         assertTrue(imprintViews.isMintPaused());
-        
+
         imprint.setMintPaused(false);
         assertFalse(imprintViews.isMintPaused());
     }
@@ -633,7 +712,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testMintRevertsWhenPaused() public {
         // Pause minting
         imprint.setMintPaused(true);
-        
+
         // Try to mint
         vm.prank(allowedSeaDrop[0]);
         vm.expectRevert(MintingPaused.selector);
@@ -643,10 +722,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testCloseActiveEdition() public {
         // Set active edition
         imprint.setActiveEdition(1);
-        
+
         // Close it by setting active edition to 0
         imprint.setActiveEdition(0);
-        
+
         // Try to mint - should fail with "no active edition"
         vm.prank(allowedSeaDrop[0]);
         vm.expectRevert(NoActiveEdition.selector);
@@ -670,21 +749,27 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertEq(imprintViews.editionSize(2), 2);
     }
 
-
     /*───────────────────────────────────────────────────────────────*/
     /*                    SupportsInterface Tests                     */
     /*───────────────────────────────────────────────────────────────*/
 
     function testSupportsInterface() public view {
         // Should support INonFungibleSeaDropTokenUpgradeable
-        assertTrue(imprint.supportsInterface(type(INonFungibleSeaDropTokenUpgradeable).interfaceId));
-        
+        assertTrue(
+            imprint.supportsInterface(
+                type(INonFungibleSeaDropTokenUpgradeable).interfaceId
+            )
+        );
+
         // Should support ISeaDropTokenContractMetadataUpgradeable
-        assertTrue(imprint.supportsInterface(type(ISeaDropTokenContractMetadataUpgradeable).interfaceId));
-        
+        assertTrue(
+            imprint.supportsInterface(
+                type(ISeaDropTokenContractMetadataUpgradeable).interfaceId
+            )
+        );
+
         // Should support standard interfaces from parent
         assertTrue(imprint.supportsInterface(type(IERC721).interfaceId));
         assertTrue(imprint.supportsInterface(type(IERC165).interfaceId));
     }
 }
-

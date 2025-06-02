@@ -2,13 +2,17 @@
 pragma solidity 0.8.17;
 
 import { ERC721SeaDropUpgradeable } from "./ERC721SeaDropUpgradeable.sol";
-import {INonFungibleSeaDropTokenUpgradeable} from "./interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
-import {ISeaDropTokenContractMetadataUpgradeable} from "./interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
+import {
+    INonFungibleSeaDropTokenUpgradeable
+} from "./interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
+import {
+    ISeaDropTokenContractMetadataUpgradeable
+} from "./interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
 import { IImprintDescriptor } from "./interfaces/IImprintDescriptor.sol";
-import { 
-    ImprintLib, 
-    SeedInput, 
-    ImprintStorage, 
+import {
+    ImprintLib,
+    SeedInput,
+    ImprintStorage,
     ZeroAddress,
     MintingPaused,
     NoActiveEdition,
@@ -48,7 +52,10 @@ contract Imprint is ERC721SeaDropUpgradeable {
     }
 
     /*═══════════════════════  Edition  API  ══════════════════════*/
-    function createEdition(uint64 editionNo, string calldata model) external onlyOwner {
+    function createEdition(uint64 editionNo, string calldata model)
+        external
+        onlyOwner
+    {
         ImprintLib.createEditionWithEvent(editionNo, model);
     }
 
@@ -64,19 +71,31 @@ contract Imprint is ERC721SeaDropUpgradeable {
         ImprintLib.setActiveEditionWithEvent(editionNo);
     }
 
-    function mintSeaDrop(address to, uint256 quantity) external override nonReentrant {
+    function mintSeaDrop(address to, uint256 quantity)
+        external
+        override
+        nonReentrant
+    {
         _onlyAllowedSeaDrop(msg.sender);
         uint256 firstTokenId = _nextTokenId();
         ImprintLib.processMint(to, quantity, firstTokenId);
         _safeMint(to, quantity);
     }
 
-    function tokenURI(uint256 tokenId) public view override returns (string memory) {
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        override
+        returns (string memory)
+    {
         if (!_exists(tokenId)) revert TokenNonexistent();
         if (descriptor == address(0)) revert DescriptorUnset();
-        
+
         (bool ok, bytes memory data) = descriptor.staticcall(
-            abi.encodeWithSelector(IImprintDescriptor.tokenURI.selector, tokenId)
+            abi.encodeWithSelector(
+                IImprintDescriptor.tokenURI.selector,
+                tokenId
+            )
         );
         if (!ok) revert DescriptorFail();
         return abi.decode(data, (string));
@@ -90,12 +109,18 @@ contract Imprint is ERC721SeaDropUpgradeable {
         ImprintLib.setMintPaused(paused);
     }
 
-    function supportsInterface(bytes4 interfaceId) 
-        public view virtual override(ERC721SeaDropUpgradeable) returns (bool) 
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC721SeaDropUpgradeable)
+        returns (bool)
     {
-        return 
-            interfaceId == type(INonFungibleSeaDropTokenUpgradeable).interfaceId ||
-            interfaceId == type(ISeaDropTokenContractMetadataUpgradeable).interfaceId ||
+        return
+            interfaceId ==
+            type(INonFungibleSeaDropTokenUpgradeable).interfaceId ||
+            interfaceId ==
+            type(ISeaDropTokenContractMetadataUpgradeable).interfaceId ||
             super.supportsInterface(interfaceId);
     }
 
@@ -107,27 +132,50 @@ contract Imprint is ERC721SeaDropUpgradeable {
     }
 
     // Delegate to ImprintLib
-    function getEditionHeader(uint64 editionNo) external view returns (ImprintStorage.EditionHeader memory) {
+    function getEditionHeader(uint64 editionNo)
+        external
+        view
+        returns (ImprintStorage.EditionHeader memory)
+    {
         return ImprintLib.getEditionHeader(editionNo);
     }
-    function getSeed(uint256 seedId) external view returns (ImprintStorage.ImprintSeed memory) {
+
+    function getSeed(uint256 seedId)
+        external
+        view
+        returns (ImprintStorage.ImprintSeed memory)
+    {
         return ImprintLib.getSeed(seedId);
     }
-    function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory) {
+
+    function getTokenMeta(uint256 tokenId)
+        external
+        view
+        returns (ImprintStorage.TokenMeta memory)
+    {
         return ImprintLib.getTokenMeta(tokenId);
     }
+
     function descPtr(uint256 tokenId) external view returns (address) {
         return ImprintLib.getDescPtr(tokenId);
     }
-    function remainingInEdition(uint64 editionNo) external view returns (uint256) {
+
+    function remainingInEdition(uint64 editionNo)
+        external
+        view
+        returns (uint256)
+    {
         return ImprintLib.getRemainingInEdition(editionNo);
     }
+
     function getWorldCanon() external view returns (address) {
         return ImprintLib.getWorldCanon();
     }
+
     function isMintPaused() external view returns (bool) {
         return ImprintLib.isMintPaused();
     }
+
     function editionSize(uint64 ed) external view returns (uint256) {
         return ImprintLib.getEditionSize(ed);
     }

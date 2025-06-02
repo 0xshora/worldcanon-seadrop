@@ -6,3 +6,4 @@ gasReporterOutput.json
 lib
 temp-src-coverage
 src-upgradeable/lib-upgradeable
+*.sol

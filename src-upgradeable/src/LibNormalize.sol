@@ -33,7 +33,9 @@ library LibNormalize {
 
         // 末尾スペース除去
         if (len > 0 && out[len - 1] == 0x20) {
-            assembly { mstore(out, sub(len, 1)) }
+            assembly {
+                mstore(out, sub(len, 1))
+            }
         }
         return out;
     }

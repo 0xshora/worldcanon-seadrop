@@ -1,0 +1,16 @@
+{
+  "network": "base-sepolia",
+  "timestamp": "2025-06-02T07:47:03.312Z",
+  "contracts": {
+    "Subject": {
+      "address": "0x9C3EE78Cc55615D2D8D04c306181bFFc43509948"
+    },
+    "ImprintLib": "0x7F26028c00982C04C27AFDc29351Abf1fa45F70A",
+    "Imprint": {
+      "proxy": "0xdF577670A2Ab6c4bC27e4BaD80F891cA5d5C5ae0",
+      "admin": "Error retrieving admin address",
+      "implementation": "Error retrieving implementation address"
+    }
+  },
+  "seaDrop": "0x00005EA00Ac477B1030CE78506496e8C2dE24bf5"
+}

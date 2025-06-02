@@ -9,6 +9,7 @@ import "@nomiclabs/hardhat-etherscan";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "hardhat-preprocessor";
+import "@openzeppelin/hardhat-upgrades";
 
 // Configure remappings.
 // https://book.getfoundry.sh/config/hardhat
@@ -51,13 +52,48 @@ const config: HardhatUserConfig = {
     verificationNetwork: {
       url: process.env.NETWORK_RPC ?? "",
     },
+    sepolia: {
+      url: process.env.ETH_SEPOLIA_RPC_URL ?? "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+    base: {
+      url: process.env.BASE_RPC_URL ?? "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
+    "base-sepolia": {
+      url: process.env.BASE_SEPOLIA_RPC_URL ?? "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.EXPLORER_API_KEY,
+    apiKey: {
+      mainnet: process.env.EXPLORER_API_KEY,
+      sepolia: process.env.ETHERSCAN_API_KEY,
+      base: process.env.BASESCAN_API_KEY,
+      "base-sepolia": process.env.BASESCAN_API_KEY,
+    },
+    customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "base-sepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+    ],
   },
   preprocess: {
     eachLine: (hre) => ({
