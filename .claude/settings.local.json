@@ -19,7 +19,8 @@
       "Bash(cast keccak:*)",
       "Bash(ls:*)",
       "Bash(npx hardhat run:*)",
-      "Bash(npx hardhat compile:*)"
+      "Bash(npx hardhat compile:*)",
+      "Bash(git commit:*)"
     ]
   },
   "enableAllProjectMcpServers": false
