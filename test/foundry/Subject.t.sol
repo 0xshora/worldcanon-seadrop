@@ -43,7 +43,7 @@ contract SubjectTest is Test {
 
     /*──────────── setUp ────────────*/
     function setUp() public {
-        subject = new Subject("World Canon Subjects", "SUBJ");
+        subject = new Subject("World Canon Subjects", "WCSBJ");
     }
 
     /*──────────── Tests ────────────*/

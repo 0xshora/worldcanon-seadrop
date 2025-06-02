@@ -16,7 +16,10 @@
       "Bash(forge build:*)",
       "Bash(forge clean:*)",
       "Bash(cast sig:*)",
-      "Bash(cast keccak:*)"
+      "Bash(cast keccak:*)",
+      "Bash(ls:*)",
+      "Bash(npx hardhat run:*)",
+      "Bash(npx hardhat compile:*)"
     ]
   },
   "enableAllProjectMcpServers": false
