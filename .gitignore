@@ -11,6 +11,8 @@ hh-cache/
 hh-cache-coverage/
 temp-src-coverage/
 
+data/
+
 # Foundry test compilation files
 cache
 out
