@@ -80,41 +80,50 @@ async function deployToBase() {
     // Subject is not upgradeable, so no proxy/admin/implementation addresses
   };
   
-  // Get proxy addresses with retry logic
+  // Get proxy addresses with manual EIP-1967 slot reading
   let imprintAddresses;
   
-  // Wait a bit more for proxy deployment to be fully confirmed
-  console.log("Waiting for proxy deployment to be fully confirmed...");
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  console.log("Retrieving proxy addresses...");
   
-  let retryCount = 0;
-  const maxRetries = 3;
-  
-  while (retryCount < maxRetries) {
+  try {
+    // Try OpenZeppelin method first
+    console.log("Attempting OpenZeppelin proxy address retrieval...");
+    imprintAddresses = {
+      proxy: imprintToken.address,
+      admin: await upgrades.erc1967.getAdminAddress(imprintToken.address),
+      implementation: await upgrades.erc1967.getImplementationAddress(
+        imprintToken.address
+      ),
+    };
+    console.log("✅ Successfully retrieved proxy addresses via OpenZeppelin");
+  } catch (error) {
+    console.log("OpenZeppelin method failed, trying manual EIP-1967 slot reading...");
+    
     try {
-      console.log(`Attempting to retrieve proxy addresses (attempt ${retryCount + 1}/${maxRetries})...`);
+      // Manual EIP-1967 slot reading
+      const implementationSlot = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
+      const adminSlot = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+      
+      const implAddressRaw = await ethers.provider.getStorageAt(imprintToken.address, implementationSlot);
+      const adminAddressRaw = await ethers.provider.getStorageAt(imprintToken.address, adminSlot);
+      
+      const implementation = ethers.utils.getAddress("0x" + implAddressRaw.slice(-40));
+      const admin = ethers.utils.getAddress("0x" + adminAddressRaw.slice(-40));
+      
       imprintAddresses = {
         proxy: imprintToken.address,
-        admin: await upgrades.erc1967.getAdminAddress(imprintToken.address),
-        implementation: await upgrades.erc1967.getImplementationAddress(
-          imprintToken.address
-        ),
+        admin: admin,
+        implementation: implementation,
       };
-      console.log("✓ Successfully retrieved proxy addresses");
-      break;
-    } catch (error) {
-      retryCount++;
-      if (retryCount >= maxRetries) {
-        console.log("Warning: Could not retrieve proxy addresses after retries, using fallback...");
-        imprintAddresses = {
-          proxy: imprintToken.address,
-          admin: "Error retrieving admin address",
-          implementation: "Error retrieving implementation address",
-        };
-      } else {
-        console.log(`Retry ${retryCount} failed, waiting 3 seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
+      
+      console.log("✅ Successfully retrieved proxy addresses via manual slot reading");
+    } catch (manualError) {
+      console.log("Manual method also failed, using fallback...");
+      imprintAddresses = {
+        proxy: imprintToken.address,
+        admin: "Error retrieving admin address",
+        implementation: "Error retrieving implementation address",
+      };
     }
   }
   
