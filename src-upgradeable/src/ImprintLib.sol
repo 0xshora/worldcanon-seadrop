@@ -245,6 +245,7 @@ library ImprintLib {
         ImprintStorage.EditionHeader storage h = st.editionHeaders[editionNo];
         if (h.editionNo == 0) revert UnknownEdition();
         if (h.isSealed) revert AlreadySealed();
+        if (st.firstSeedId[editionNo] == 0) revert NoSeeds();
         h.isSealed = true;
     }
 
@@ -340,11 +341,11 @@ library ImprintLib {
         returns (uint256 remaining)
     {
         ImprintStorage.Layout storage st = ImprintStorage.layout();
-        uint256 cursor = st.activeCursor;
+        uint256 first = st.firstSeedId[editionNo];
         uint256 last = st.lastSeedId[editionNo];
-        if (cursor == 0 || cursor > last) return 0;
+        if (first == 0 || last == 0) return 0;
         unchecked {
-            for (uint256 i = cursor; i <= last; ++i) {
+            for (uint256 i = first; i <= last; ++i) {
                 if (!st.seeds[i].claimed) ++remaining;
             }
         }

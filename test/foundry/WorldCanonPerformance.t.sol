@@ -72,6 +72,9 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // 基本コントラクトデプロイ
         proxyAdmin = new ProxyAdmin();
         subject = new Subject("World Canon Subjects", "WCSBJ");
+        
+        // Subject の所有者をownerに移転
+        subject.transferOwnership(owner);
 
         Imprint implementation = new Imprint();
         address[] memory allowedSeaDrop = new address[](1);

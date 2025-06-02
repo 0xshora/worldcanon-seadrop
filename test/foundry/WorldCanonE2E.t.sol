@@ -92,6 +92,9 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
 
         /*──── Subject (不変NFT) のデプロイ ────*/
         subject = new Subject("World Canon Subjects", "WCSBJ");
+        
+        // Subject の所有者をcuratorに移転（実際の運用に合わせる）
+        subject.transferOwnership(curator);
 
         /*──── Imprint (アップグレード可能NFT) のデプロイ ────*/
         Imprint implementation = new Imprint();
@@ -126,8 +129,9 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         imprint.setContractURI("https://worldcanon.art/contract");
         imprint.setBaseURI("https://worldcanon.art/");
         
-        // World Canon連携設定
+        // World Canon連携設定（双方向）
         imprint.setWorldCanon(address(subject));
+        subject.setImprintContract(address(imprint));
         
         // SeaDrop設定
         imprint.updateCreatorPayoutAddress(address(seadrop), curator);
@@ -358,17 +362,29 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         
         console.log("Phase 6: Claude Era transition mint started");
         
+        // 時代遷移を明確にするため、時間を進める
+        vm.warp(block.timestamp + 1 hours);
+        
         uint256 claudeMintQuantity = 3;
         
         // collector2がClaude-3.7 Editionからミント
+        (, uint256 beforeLatestImprint, ) = subject.subjectMeta(0);
+        console.log("Before Claude mint - Subject #0 latest Imprint: %d", beforeLatestImprint);
+        
         vm.prank(address(seadrop));
         imprint.mintSeaDrop(collector2, claudeMintQuantity);
+        
+        (, uint256 afterLatestImprint, ) = subject.subjectMeta(0);
+        console.log("After Claude mint - Subject #0 latest Imprint: %d", afterLatestImprint);
         
         assertEq(imprint.totalSupply(), mintQuantity + claudeMintQuantity, "Total mint count incorrect");
         assertEq(imprint.ownerOf(6), collector2, "Claude Era NFT owner incorrect");
         
         // Claude EraのImprintメタデータ確認
         ImprintStorage.TokenMeta memory claudeTokenMeta = imprintViews.getTokenMeta(6);
+        console.log("Claude Token #6 - Subject name: %s", claudeTokenMeta.subjectName);
+        console.log("Claude Token #6 - Edition: %d", claudeTokenMeta.editionNo);
+        
         assertEq(claudeTokenMeta.editionNo, 2, "Claude Token Edition incorrect");
         assertEq(claudeTokenMeta.model, "Claude-3.7", "Claude Token model incorrect");
         assertEq(claudeTokenMeta.subjectName, "Subject_0", "Claude Token Subject name incorrect");
@@ -481,7 +497,7 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         vm.prank(curator);
         subject.mintInitial(_createSingleSubjectArray("Happiness"));
         
-        _createGPT4oEdition();
+        _createSingleSubjectEdition();
         
         /*──── LLM出力シミュレーション ────*/
         // string memory llmOutput = "Happiness is the fundamental pursuit of human existence, "
@@ -520,6 +536,33 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         string[] memory arr = new string[](1);
         arr[0] = name;
         return arr;
+    }
+
+    function _createSingleSubjectEdition() internal {
+        vm.prank(curator);
+        imprint.createEdition(1, "GPT-4o");
+
+        // "Happiness"用のSeed作成
+        SeedInput[] memory seeds = new SeedInput[](1);
+        seeds[0] = SeedInput({
+            editionNo: 1,
+            localIndex: 1,
+            subjectId: 0,
+            subjectName: "Happiness",
+            desc: abi.encodePacked(
+                "GPT-4o perspective on Happiness: ",
+                "A nuanced AI interpretation of this fundamental human emotion."
+            )
+        });
+
+        vm.prank(curator);
+        imprint.addSeeds(seeds);
+        
+        vm.prank(curator);
+        imprint.sealEdition(1);
+        
+        vm.prank(curator);
+        imprint.setActiveEdition(1);
     }
 
     function _startsWith(string memory str, string memory prefix) 
