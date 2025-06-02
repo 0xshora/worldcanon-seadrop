@@ -2,20 +2,19 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
-import {Subject} from "../../src-upgradeable/src/Subject.sol";
-import {LibNormalize} from "../../src-upgradeable/src/LibNormalize.sol";
+import { Subject } from "../../src-upgradeable/src/Subject.sol";
+import { LibNormalize } from "../../src-upgradeable/src/LibNormalize.sol";
 
 using LibNormalize for string;
-
 
 /*──── Minimal mock Imprint ────*/
 contract MockImprint {
     address public descriptor;
-    
+
     constructor() {
         descriptor = address(this);
     }
-    
+
     function tokenImage(uint256) external pure returns (string memory) {
         return "mock://image";
     }
@@ -24,22 +23,39 @@ contract MockImprint {
 contract SubjectTest is Test {
     Subject subject;
     address alice = address(0xA);
-    address bob   = address(0xB);
+    address bob = address(0xB);
 
     /*── イベントを再宣言（テスト用） ──*/
-    event LatestImprintUpdated(uint256 indexed tokenId, uint256 indexed imprintId);
+    event LatestImprintUpdated(
+        uint256 indexed tokenId,
+        uint256 indexed imprintId
+    );
 
     /*──────────── Helpers ────────────*/
-    function _names1(string memory a) internal pure returns (string[] memory arr) {
+    function _names1(string memory a)
+        internal
+        pure
+        returns (string[] memory arr)
+    {
         arr = new string[](1);
         arr[0] = a;
     }
-    function _names2(string memory a, string memory b) internal pure returns (string[] memory arr) {
+
+    function _names2(string memory a, string memory b)
+        internal
+        pure
+        returns (string[] memory arr)
+    {
         arr = new string[](2);
         arr[0] = a;
         arr[1] = b;
     }
-    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
+
+    function _startsWith(string memory s, string memory prefix)
+        internal
+        pure
+        returns (bool)
+    {
         bytes memory A = bytes(s);
         bytes memory P = bytes(prefix);
         if (P.length > A.length) return false;
@@ -155,9 +171,9 @@ contract SubjectTest is Test {
 
         // ④ 自動生成を検証
         assertEq(subject.totalSupply(), 1);
-        ( , uint256 latest, uint256 ts ) = subject.subjectMeta(0);
+        (, uint256 latest, uint256 ts) = subject.subjectMeta(0);
         assertEq(latest, 11);
-        assertEq(ts,     1_000);
+        assertEq(ts, 1_000);
 
         // ⑤ 名前ハッシュが TokenId(+1) に紐付いていること
         // アプローチを変更: publicのgetSubjectIdByName関数が必要か、
@@ -167,8 +183,8 @@ contract SubjectTest is Test {
         uint256 prevSupply = subject.totalSupply();
         subject.syncFromImprint(sameName, 12, 2_000);
         assertEq(subject.totalSupply(), prevSupply); // 新しいSubjectは作成されない
-        
-        ( , uint256 latestAfter, uint256 tsAfter ) = subject.subjectMeta(0);
+
+        (, uint256 latestAfter, uint256 tsAfter) = subject.subjectMeta(0);
         assertEq(latestAfter, 12);
         assertEq(tsAfter, 2_000);
     }
@@ -183,19 +199,19 @@ contract SubjectTest is Test {
         subject.syncFromImprint("Ocean", 21, 500);
         (, uint256 latestOld, uint256 tsOld) = subject.subjectMeta(0);
         assertEq(latestOld, 21);
-        assertEq(tsOld,     500);
+        assertEq(tsOld, 500);
 
         // 更に古い timestamp (400) で sync → 無視
         subject.syncFromImprint("Ocean", 22, 400);
         (, uint256 latestStill, uint256 tsStill) = subject.subjectMeta(0);
         assertEq(latestStill, 21);
-        assertEq(tsStill,     500);
+        assertEq(tsStill, 500);
 
         // 新しい timestamp (600) で sync → 上書き
         subject.syncFromImprint("Ocean", 23, 600);
         (, uint256 latestNew, uint256 tsNew) = subject.subjectMeta(0);
         assertEq(latestNew, 23);
-        assertEq(tsNew,     600);
+        assertEq(tsNew, 600);
     }
 
     /* syncFromImprint — onlyImprint 修飾子 */

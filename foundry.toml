@@ -31,6 +31,17 @@ compilation_restrictions = [
 [profile.ir_inspect]
 test = 'src'
 
+[fmt]
+line_length = 120
+tab_width = 4
+bracket_spacing = true
+int_types = "preserve"
+multiline_func_header = "attributes_first"
+quote_style = "double"
+number_underscore = "preserve"
+override_spacing = false
+wrap_comments = false
+
 [rpc_endpoints]
 goerli = '${GOERLI_RPC_URL}'
 mainnet = '${ETHEREUM_RPC_URL}'

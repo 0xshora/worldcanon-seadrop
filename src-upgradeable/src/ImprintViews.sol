@@ -15,7 +15,11 @@ contract ImprintViews {
         imprint = _imprint;
     }
 
-    function getEditionHeader(uint64 editionNo) external view returns (ImprintStorage.EditionHeader memory) {
+    function getEditionHeader(uint64 editionNo)
+        external
+        view
+        returns (ImprintStorage.EditionHeader memory)
+    {
         (bool success, bytes memory data) = imprint.staticcall(
             abi.encodeWithSelector(0x195b2ea7, editionNo) // getEditionHeader selector
         );
@@ -23,7 +27,11 @@ contract ImprintViews {
         return abi.decode(data, (ImprintStorage.EditionHeader));
     }
 
-    function getSeed(uint256 seedId) external view returns (ImprintStorage.ImprintSeed memory) {
+    function getSeed(uint256 seedId)
+        external
+        view
+        returns (ImprintStorage.ImprintSeed memory)
+    {
         (bool success, bytes memory data) = imprint.staticcall(
             abi.encodeWithSelector(0xe0d4ea37, seedId) // getSeed selector
         );
@@ -31,7 +39,11 @@ contract ImprintViews {
         return abi.decode(data, (ImprintStorage.ImprintSeed));
     }
 
-    function getTokenMeta(uint256 tokenId) external view returns (ImprintStorage.TokenMeta memory) {
+    function getTokenMeta(uint256 tokenId)
+        external
+        view
+        returns (ImprintStorage.TokenMeta memory)
+    {
         (bool success, bytes memory data) = imprint.staticcall(
             abi.encodeWithSelector(0xb40e5570, tokenId) // getTokenMeta selector
         );
@@ -39,7 +51,11 @@ contract ImprintViews {
         return abi.decode(data, (ImprintStorage.TokenMeta));
     }
 
-    function remainingInEdition(uint64 editionNo) external view returns (uint256) {
+    function remainingInEdition(uint64 editionNo)
+        external
+        view
+        returns (uint256)
+    {
         (bool success, bytes memory data) = imprint.staticcall(
             abi.encodeWithSelector(0x03e0c537, editionNo) // remainingInEdition selector
         );
@@ -79,5 +95,4 @@ contract ImprintViews {
         require(success, "call failed");
         return abi.decode(data, (address));
     }
-
 }

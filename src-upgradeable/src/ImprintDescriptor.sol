@@ -15,7 +15,11 @@ struct TokenMeta {
 
 interface IImprint {
     function descPtr(uint256 tokenId) external view returns (address);
-    function getTokenMeta(uint256 tokenId) external view returns (TokenMeta memory);
+
+    function getTokenMeta(uint256 tokenId)
+        external
+        view
+        returns (TokenMeta memory);
 }
 
 contract ImprintDescriptor is IImprintDescriptor {
@@ -24,14 +28,14 @@ contract ImprintDescriptor is IImprintDescriptor {
     address public immutable imprint;
     address public immutable svgPrefixPtr;
     address public immutable svgSuffixPtr;
-    
+
     // Storage mapping for descPtr that Imprint can write to
     mapping(uint256 => address) public descPtr;
 
     constructor(address _imprint) {
         require(_imprint != address(0), "zero address");
         imprint = _imprint;
-        
+
         // Initialize SVG templates
         svgPrefixPtr = SSTORE2.write(
             '<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350">'
@@ -39,7 +43,7 @@ contract ImprintDescriptor is IImprintDescriptor {
             '<foreignObject x="10" y="10" width="330" height="330">'
             '<div xmlns="http://www.w3.org/1999/xhtml" style="color:white;font:20px/1.4 Courier New,monospace;overflow-wrap:anywhere;">'
         );
-        svgSuffixPtr = SSTORE2.write('</div></foreignObject></svg>');
+        svgSuffixPtr = SSTORE2.write("</div></foreignObject></svg>");
     }
 
     /// @notice Allows the Imprint contract to set descPtr for a token
@@ -50,7 +54,12 @@ contract ImprintDescriptor is IImprintDescriptor {
         descPtr[tokenId] = ptr;
     }
 
-    function tokenImage(uint256 tokenId) external view override returns (string memory) {
+    function tokenImage(uint256 tokenId)
+        external
+        view
+        override
+        returns (string memory)
+    {
         IImprint imp = IImprint(imprint);
         address ptr = imp.descPtr(tokenId);
         require(ptr != address(0), "desc missing");
@@ -62,15 +71,21 @@ contract ImprintDescriptor is IImprintDescriptor {
             SSTORE2.read(svgSuffixPtr)
         );
 
-        return string(
-            abi.encodePacked(
-                "data:image/svg+xml;base64,",
-                Base64.encode(svg)
-            )
-        );
+        return
+            string(
+                abi.encodePacked(
+                    "data:image/svg+xml;base64,",
+                    Base64.encode(svg)
+                )
+            );
     }
 
-    function tokenURI(uint256 tokenId) external view override returns (string memory) {
+    function tokenURI(uint256 tokenId)
+        external
+        view
+        override
+        returns (string memory)
+    {
         IImprint imp = IImprint(imprint);
         address ptr = imp.descPtr(tokenId);
         require(ptr != address(0), "desc missing");
@@ -89,18 +104,37 @@ contract ImprintDescriptor is IImprintDescriptor {
 
         // Build JSON metadata
         bytes memory json = abi.encodePacked(
-            '{"name":"Imprint #', tokenId.toString(), ' - ', tokenMeta.subjectName,
-            ' (', tokenMeta.model, ')"',
+            '{"name":"Imprint #',
+            tokenId.toString(),
+            " - ",
+            tokenMeta.subjectName,
+            " (",
+            tokenMeta.model,
+            ')"',
             ',"attributes":['
-                '{"trait_type":"Edition","value":"', uint256(tokenMeta.editionNo).toString(), '"},'
-                '{"trait_type":"Local Index","value":"', uint256(tokenMeta.localIndex).toString(), '"},'
-                '{"trait_type":"Model","value":"', tokenMeta.model, '"},'
-                '{"trait_type":"Subject","value":"', tokenMeta.subjectName, '"}'
-            '],"image":"data:image/svg+xml;base64,', svgB64, '"}'
+            '{"trait_type":"Edition","value":"',
+            uint256(tokenMeta.editionNo).toString(),
+            '"},'
+            '{"trait_type":"Local Index","value":"',
+            uint256(tokenMeta.localIndex).toString(),
+            '"},'
+            '{"trait_type":"Model","value":"',
+            tokenMeta.model,
+            '"},'
+            '{"trait_type":"Subject","value":"',
+            tokenMeta.subjectName,
+            '"}'
+            '],"image":"data:image/svg+xml;base64,',
+            svgB64,
+            '"}'
         );
-        
-        return string(
-            abi.encodePacked("data:application/json;base64,", Base64.encode(json))
-        );
+
+        return
+            string(
+                abi.encodePacked(
+                    "data:application/json;base64,",
+                    Base64.encode(json)
+                )
+            );
     }
 }
