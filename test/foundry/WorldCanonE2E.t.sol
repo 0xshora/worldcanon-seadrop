@@ -185,11 +185,11 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
                 localIndex: i + 1,
                 subjectId: i,
                 subjectName: initialSubjects[i],
-                desc: string(abi.encodePacked(
+                desc: abi.encodePacked(
                     "GPT-4o perspective on ",
                     initialSubjects[i],
                     ": A nuanced AI interpretation of this concept."
-                ))
+                )
             });
         }
 
@@ -215,11 +215,11 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
                 localIndex: i + 1,
                 subjectId: i,
                 subjectName: initialSubjects[i],
-                desc: string(abi.encodePacked(
+                desc: abi.encodePacked(
                     "Claude-3.7 perspective on ",
                     initialSubjects[i],
                     ": A thoughtful constitutional AI view of this subject."
-                ))
+                )
             });
         }
 
@@ -298,11 +298,10 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         console.log("Phase 3: GPT-4o Era public mint started");
         
         uint256 mintQuantity = 5;
-        uint256 mintPrice = 0.01 ether * mintQuantity;
         
         // collector1がGPT-4o Editionからミント
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: mintPrice}(collector1, mintQuantity);
+        imprint.mintSeaDrop(collector1, mintQuantity);
         
         assertEq(imprint.totalSupply(), mintQuantity, "Mint count incorrect");
         assertEq(imprint.ownerOf(1), collector1, "NFT owner incorrect");
@@ -327,7 +326,7 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         assertTrue(bytes(subjectURI).length > 0, "Subject tokenURI is empty");
         
         // Subject metaの確認
-        (uint64 addedEdition, uint256 latestImprint) = subject.subjectMeta(0);
+        (uint64 addedEdition, uint256 latestImprint, ) = subject.subjectMeta(0);
         assertEq(addedEdition, 0, "Subject added Edition number incorrect");
         assertEq(latestImprint, 1, "Latest Imprint ID incorrect");
         
@@ -360,11 +359,10 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         console.log("Phase 6: Claude Era transition mint started");
         
         uint256 claudeMintQuantity = 3;
-        uint256 claudeMintPrice = 0.01 ether * claudeMintQuantity;
         
         // collector2がClaude-3.7 Editionからミント
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: claudeMintPrice}(collector2, claudeMintQuantity);
+        imprint.mintSeaDrop(collector2, claudeMintQuantity);
         
         assertEq(imprint.totalSupply(), mintQuantity + claudeMintQuantity, "Total mint count incorrect");
         assertEq(imprint.ownerOf(6), collector2, "Claude Era NFT owner incorrect");
@@ -384,7 +382,7 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         console.log("Phase 7: Era transition integrity verification started");
         
         // Subject #0の最新Imprint更新確認（Claude Era: tokenId=6）
-        (, uint256 newLatestImprint) = subject.subjectMeta(0);
+        (, uint256 newLatestImprint, ) = subject.subjectMeta(0);
         assertEq(newLatestImprint, 6, "Subject latest Imprint not updated");
         
         // 両時代のImprintが共存していることを確認
@@ -439,22 +437,21 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         
         /*──── 同時ミント実行 ────*/
         uint256 mintQuantity = 25; // 上限まで
-        uint256 mintPrice = 0.01 ether * mintQuantity;
         
         // collector1: 25枚ミント
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: mintPrice}(collector1, mintQuantity);
+        imprint.mintSeaDrop(collector1, mintQuantity);
         assertEq(imprint.balanceOf(collector1), 25, "collector1 balance incorrect");
         
         // collector2: 25枚ミント
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: mintPrice}(collector2, mintQuantity);
+        imprint.mintSeaDrop(collector2, mintQuantity);
         assertEq(imprint.balanceOf(collector2), 25, "collector2 balance incorrect");
         
         // collector3: 残り分をミント（50 - 25 - 25 = 0, エラーになるはず）
         vm.prank(address(seadrop));
         vm.expectRevert(SoldOut.selector);
-        imprint.mintSeaDrop{value: 0.01 ether}(collector3, 1);
+        imprint.mintSeaDrop(collector3, 1);
         
         /*──── 最終状態確認 ────*/
         assertEq(imprint.totalSupply(), 50, "Total mint count incorrect");
@@ -487,13 +484,14 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         _createGPT4oEdition();
         
         /*──── LLM出力シミュレーション ────*/
-        string memory llmOutput = "Happiness is the fundamental pursuit of human existence, "
-                                  "manifesting as fleeting moments of joy that illuminate our "
-                                  "shared humanity and transcend individual suffering.";
+        // string memory llmOutput = "Happiness is the fundamental pursuit of human existence, "
+        //                           "manifesting as fleeting moments of joy that illuminate our "
+        //                           "shared humanity and transcend individual suffering.";
+        // llmOutput is simulated in the desc field of seeds
         
         /*──── NFTミント ────*/
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.01 ether}(collector1, 1);
+        imprint.mintSeaDrop(collector1, 1);
         
         /*──── SVG生成確認 ────*/
         string memory tokenImage = IImprintDescriptor(imprint.descriptor()).tokenImage(1);
@@ -504,7 +502,7 @@ contract WorldCanonE2ETest is TestHelper, IERC721Receiver {
         assertTrue(_startsWith(tokenURI, "data:application/json;base64,"), "JSON Data URI incorrect");
         
         /*──── Subject連携確認 ────*/
-        (, uint256 latestImprint) = subject.subjectMeta(0);
+        (, uint256 latestImprint, ) = subject.subjectMeta(0);
         assertEq(latestImprint, 1, "Subject integration incorrect");
         
         string memory subjectURI = subject.tokenURI(0);

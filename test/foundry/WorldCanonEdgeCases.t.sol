@@ -156,7 +156,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
                     localIndex: uint16(globalIndex + 1),
                     subjectId: globalIndex,
                     subjectName: string(abi.encodePacked("Subject_", _toString(globalIndex))),
-                    desc: string(abi.encodePacked("Description_", _toString(globalIndex)))
+                    desc: abi.encodePacked("Description_", _toString(globalIndex))
                 });
             }
             
@@ -186,18 +186,18 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // 24枚ミント（制限内）
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.24 ether}(user1, 24);
+        imprint.mintSeaDrop(user1, 24);
         assertEq(imprint.balanceOf(user1), 24, "24 token mint failed");
 
         // 1枚追加ミント（制限ピッタリ）
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.01 ether}(user1, 1);
+        imprint.mintSeaDrop(user1, 1);
         assertEq(imprint.balanceOf(user1), 25, "25th token mint failed");
 
         // 1枚追加ミント（制限超過）
         vm.prank(address(seadrop));
         vm.expectRevert();
-        imprint.mintSeaDrop{value: 0.01 ether}(user1, 1);
+        imprint.mintSeaDrop(user1, 1);
 
         console.log(" Max Mint Limit Boundary Test SUCCESS");
     }
@@ -375,7 +375,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
             SeedInput[] memory singleSeed = new SeedInput[](1);
             singleSeed[0] = SeedInput({
                 editionNo: 1, localIndex: uint16(i + 1), subjectId: i,
-                subjectName: _toString(i), desc: _toString(i)
+                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
             });
             imprint.addSeeds(singleSeed);
         }
@@ -388,7 +388,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         for (uint256 i = 0; i < 10; i++) {
             batchSeeds[i] = SeedInput({
                 editionNo: 2, localIndex: uint16(i + 1), subjectId: i,
-                subjectName: _toString(i), desc: _toString(i)
+                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
             });
         }
 
@@ -421,7 +421,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         _createBasicEdition();
         
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.05 ether}(user1, 5);
+        imprint.mintSeaDrop(user1, 5);
 
         // アップグレード前の状態を記録
         uint256 preUpgradeTotalSupply = imprint.totalSupply();
@@ -461,7 +461,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         for (uint16 i = 0; i < 50; i++) {
             seeds[i] = SeedInput({
                 editionNo: 1, localIndex: i + 1, subjectId: i,
-                subjectName: _toString(i), desc: _toString(i)
+                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
             });
         }
         
@@ -513,7 +513,7 @@ contract MaliciousReentrancy is IERC721Receiver {
     function attemptReentrancy() external {
         attacking = true;
         // 再入攻撃試行
-        target.mintSeaDrop{value: 0.01 ether}(address(this), 1);
+        target.mintSeaDrop(address(this), 1);
     }
 
     function onERC721Received(
@@ -525,7 +525,7 @@ contract MaliciousReentrancy is IERC721Receiver {
         if (attacking) {
             attacking = false;
             // 再入試行
-            target.mintSeaDrop{value: 0.01 ether}(address(this), 1);
+            target.mintSeaDrop(address(this), 1);
         }
         return IERC721Receiver.onERC721Received.selector;
     }

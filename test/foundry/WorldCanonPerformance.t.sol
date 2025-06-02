@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import "forge-std/Test.sol";
+import "forge-std/console2.sol";
 import { TestHelper } from "test/foundry/utils/TestHelper.sol";
 
 import { Subject } from "../../src-upgradeable/src/Subject.sol";
@@ -146,7 +147,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
             uint256 batchSize = batchSizes[i];
             
             // 新しいEditionを作成（テスト分離のため）
-            imprint.createEdition(i + 2, string(abi.encodePacked("Model_", _toString(i))));
+            imprint.createEdition(uint64(i + 2), string(abi.encodePacked("Model_", _toString(i))));
             
             // Seeds準備
             SeedInput[] memory seeds = new SeedInput[](batchSize);
@@ -156,7 +157,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                     localIndex: uint16(j + 1),
                     subjectId: j,
                     subjectName: string(abi.encodePacked("Subject_", _toString(j))),
-                    desc: string(abi.encodePacked("Description_", _toString(j)))
+                    desc: abi.encodePacked("Description_", _toString(j))
                 });
             }
 
@@ -217,7 +218,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                 localIndex: uint16(i + 1),
                 subjectId: i,
                 subjectName: string(abi.encodePacked("Subject_", _toString(i))),
-                desc: testDescriptions[i]
+                desc: abi.encodePacked(testDescriptions[i])
             });
 
             uint256 gasStart = gasleft();
@@ -285,8 +286,8 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
             uint256 gasUsed = gasStart - gasleft();
             totalGasUsed += gasUsed;
 
-            console.log("Batch %d/%d: %d subjects, Gas: %d", 
-                       batch + 1, batches, batchSize, gasUsed);
+            // console.log("Batch %s/%s: %s subjects, Gas: %s", 
+            //            _toString(batch + 1), _toString(batches), _toString(batchSize), _toString(gasUsed));
         }
 
         // 検証
@@ -334,7 +335,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                         localIndex: uint16(localIndex),
                         subjectId: localIndex - 1,
                         subjectName: string(abi.encodePacked("Subject_", _toString(localIndex - 1))),
-                        desc: string(abi.encodePacked("Edition_", _toString(ed), "_Desc_", _toString(localIndex)))
+                        desc: abi.encodePacked("Edition_", _toString(ed), "_Desc_", _toString(localIndex))
                     });
                 }
 
@@ -399,7 +400,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                     localIndex: uint16(globalIndex + 1),
                     subjectId: globalIndex,
                     subjectName: string(abi.encodePacked("Subject_", _toString(globalIndex))),
-                    desc: string(abi.encodePacked("HV_Desc_", _toString(globalIndex)))
+                    desc: abi.encodePacked("HV_Desc_", _toString(globalIndex))
                 });
             }
             
@@ -421,19 +422,19 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // user1のミント
         uint256 gasStart = gasleft();
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.25 ether}(user1, mintQuantities[0]);
+        imprint.mintSeaDrop(user1, mintQuantities[0]);
         gasUsages[0] = gasStart - gasleft();
 
         // user2のミント
         gasStart = gasleft();
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.25 ether}(user2, mintQuantities[1]);
+        imprint.mintSeaDrop(user2, mintQuantities[1]);
         gasUsages[1] = gasStart - gasleft();
 
         // このコントラクトのミント
         gasStart = gasleft();
         vm.prank(address(seadrop));
-        imprint.mintSeaDrop{value: 0.25 ether}(address(this), mintQuantities[2]);
+        imprint.mintSeaDrop(address(this), mintQuantities[2]);
         gasUsages[2] = gasStart - gasleft();
 
         // パフォーマンス分析
