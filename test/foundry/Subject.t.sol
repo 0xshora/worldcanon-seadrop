@@ -10,6 +10,12 @@ using LibNormalize for string;
 
 /*──── Minimal mock Imprint ────*/
 contract MockImprint {
+    address public descriptor;
+    
+    constructor() {
+        descriptor = address(this);
+    }
+    
     function tokenImage(uint256) external pure returns (string memory) {
         return "mock://image";
     }
@@ -47,7 +53,7 @@ contract SubjectTest is Test {
     }
 
     /*──────────── Tests ────────────*/
-    function testOwnerIsDeployer() public {
+    function testOwnerIsDeployer() public view {
         assertEq(subject.owner(), address(this));
     }
 
@@ -138,7 +144,6 @@ contract SubjectTest is Test {
     /* syncFromImprint — 新規 Subject 自動生成 */
     function testSyncFromImprintCreatesSubject() public {
         // ① imprintContract セット
-        MockImprint mock = new MockImprint();
         subject.setImprintContract(address(this)); // ← テストコントラクトを Imprint と見なす
 
         // ② まだ totalSupply==0
