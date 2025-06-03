@@ -30,35 +30,19 @@ import {
     WorldCanonAlreadySet
 } from "../../src-upgradeable/src/ImprintLib.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
-import {
-    ImprintDescriptor
-} from "../../src-upgradeable/src/ImprintDescriptor.sol";
-import {
-    IImprintDescriptor
-} from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
-import {
-    TransparentUpgradeableProxy
-} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {
-    ProxyAdmin
-} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
-import {
-    PublicDrop
-} from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
-import {
-    IERC721Receiver
-} from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
+import { IImprintDescriptor } from "../../src-upgradeable/src/interfaces/IImprintDescriptor.sol";
+import { TransparentUpgradeableProxy } from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
+import { IERC721Receiver } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 import { Strings } from "openzeppelin-contracts/utils/Strings.sol";
 import { IERC721 } from "openzeppelin-contracts/token/ERC721/IERC721.sol";
-import {
-    IERC165
-} from "openzeppelin-contracts/utils/introspection/IERC165.sol";
-import {
-    INonFungibleSeaDropTokenUpgradeable
-} from "../../src-upgradeable/src/interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
-import {
-    ISeaDropTokenContractMetadataUpgradeable
-} from "../../src-upgradeable/src/interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
+import { IERC165 } from "openzeppelin-contracts/utils/introspection/IERC165.sol";
+import { INonFungibleSeaDropTokenUpgradeable } from
+    "../../src-upgradeable/src/interfaces/INonFungibleSeaDropTokenUpgradeable.sol";
+import { ISeaDropTokenContractMetadataUpgradeable } from
+    "../../src-upgradeable/src/interfaces/ISeaDropTokenContractMetadataUpgradeable.sol";
 
 contract ImprintV2 is Imprint {
     function version() external pure returns (string memory) {
@@ -76,11 +60,7 @@ contract MockSubject {
 
     Call[] public syncCalls;
 
-    function syncFromImprint(
-        string calldata subjectName,
-        uint256 imprintId,
-        uint64 ts
-    ) external {
+    function syncFromImprint(string calldata subjectName, uint256 imprintId, uint64 ts) external {
         syncCalls.push(Call(subjectName, imprintId, ts));
     }
 
@@ -89,13 +69,11 @@ contract MockSubject {
     }
 }
 
-import {
-    SSTORE2
-} from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
+import { SSTORE2 } from "../../src-upgradeable/lib-upgradeable/solmate/src/utils/SSTORE2.sol";
 
 contract ImprintTest is TestHelper, IERC721Receiver {
     // Allow contract to receive ETH for withdrawal testing
-    receive() external payable {}
+    receive() external payable { }
 
     Imprint imprint;
     ImprintViews imprintViews;
@@ -106,23 +84,17 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     address[] allowedSeaDrop;
 
     /*──────────── Helpers ────────────*/
-    function _startsWith(string memory s, string memory prefix)
-        internal
-        pure
-        returns (bool)
-    {
+    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
         bytes memory A = bytes(s);
         bytes memory P = bytes(prefix);
         if (P.length > A.length) return false;
-        for (uint256 i; i < P.length; ++i) if (A[i] != P[i]) return false;
+        for (uint256 i; i < P.length; ++i) {
+            if (A[i] != P[i]) return false;
+        }
         return true;
     }
 
-    function _contains(string memory s, string memory sub)
-        internal
-        pure
-        returns (bool)
-    {
+    function _contains(string memory s, string memory sub) internal pure returns (bool) {
         bytes memory a = bytes(s);
         bytes memory b = bytes(sub);
         if (b.length > a.length) return false;
@@ -148,18 +120,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         allowedSeaDrop[0] = address(seadrop);
 
         bytes memory data = abi.encodeWithSelector(
-            Imprint.initializeImprint.selector,
-            "WorldCanonImprint",
-            "WCIMP",
-            allowedSeaDrop,
-            address(this)
+            Imprint.initializeImprint.selector, "WorldCanonImprint", "WCIMP", allowedSeaDrop, address(this)
         );
 
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(implementation),
-            address(proxyAdmin),
-            data
-        );
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), data);
 
         imprint = Imprint(address(proxy));
 
@@ -193,9 +158,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
         imprint.updateAllowedFeeRecipient(address(seadrop), address(5), true);
 
-        /******************************************************************
+        /**
+         *
          * ↓↓↓   ここからテスト用の Edition / Seed セットアップ   ↓↓↓
-         ******************************************************************/
+         *
+         */
 
         // ① Edition #1 を作成
         imprint.createEdition(1, "GPT-4o");
@@ -207,9 +174,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
                 editionNo: 1,
                 localIndex: i + 1, // 1,2,3
                 subjectId: 0,
-                subjectName: string(
-                    abi.encodePacked("Seed", Strings.toString(i + 1))
-                ),
+                subjectName: string(abi.encodePacked("Seed", Strings.toString(i + 1))),
                 desc: "<svg></svg>"
             });
         }
@@ -224,20 +189,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
         // ⑤ Edition 2 にSeedを2つ登録
         SeedInput[] memory seeds2 = new SeedInput[](2);
-        seeds2[0] = SeedInput({
-            editionNo: 2,
-            localIndex: 1,
-            subjectId: 0,
-            subjectName: "Test1",
-            desc: "<svg>test1</svg>"
-        });
-        seeds2[1] = SeedInput({
-            editionNo: 2,
-            localIndex: 2,
-            subjectId: 0,
-            subjectName: "Test2",
-            desc: "<svg>test2</svg>"
-        });
+        seeds2[0] =
+            SeedInput({ editionNo: 2, localIndex: 1, subjectId: 0, subjectName: "Test1", desc: "<svg>test1</svg>" });
+        seeds2[1] =
+            SeedInput({ editionNo: 2, localIndex: 2, subjectId: 0, subjectName: "Test2", desc: "<svg>test2</svg>" });
         imprint.addSeeds(seeds2);
     }
 
@@ -256,12 +211,12 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /* ------------------------------------------------------------------ */
     /*                        IERC721Receiver hook                        */
     /* ------------------------------------------------------------------ */
-    function onERC721Received(
-        address, /*operator*/
-        address, /*from*/
-        uint256, /*tokenId*/
-        bytes calldata /*data*/
-    ) external pure override returns (bytes4) {
+    function onERC721Received(address, /*operator*/ address, /*from*/ uint256, /*tokenId*/ bytes calldata /*data*/ )
+        external
+        pure
+        override
+        returns (bytes4)
+    {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -270,9 +225,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /// admin はロジック関数を呼べない（fallback 分岐）
     function testAdminCannotFallback() public {
         vm.prank(address(proxyAdmin));
-        vm.expectRevert(
-            "TransparentUpgradeableProxy: admin cannot fallback to proxy target"
-        );
+        vm.expectRevert("TransparentUpgradeableProxy: admin cannot fallback to proxy target");
         Imprint(address(imprint)).totalSupply();
     }
 
@@ -298,17 +251,11 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         /* 2) 非 admin で失敗 */
         vm.prank(user);
         vm.expectRevert("Ownable: caller is not the owner");
-        proxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(address(imprint))),
-            address(newImpl)
-        );
+        proxyAdmin.upgrade(TransparentUpgradeableProxy(payable(address(imprint))), address(newImpl));
 
         /* 3) admin で成功 */
         vm.prank(proxyAdmin.owner());
-        proxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(address(imprint))),
-            address(newImpl)
-        );
+        proxyAdmin.upgrade(TransparentUpgradeableProxy(payable(address(imprint))), address(newImpl));
 
         /* 4) state 保持 + 新機能 */
         assertEq(ImprintV2(address(imprint)).totalSupply(), 2);
@@ -328,11 +275,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
         // Check that descPtr is set initially
         address originalPtr = imprint.descPtr(1);
-        assertNotEq(
-            originalPtr,
-            address(0),
-            "descPtr should be set after mint"
-        );
+        assertNotEq(originalPtr, address(0), "descPtr should be set after mint");
 
         // 強制的に descPtr を消す
         bytes32 slot = keccak256("worldcanon.imprint.storage.v0");
@@ -362,9 +305,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         vm.store(address(imprint), mapSlot, bytes32(uint256(uint160(ptr))));
 
         /* 4. 取得チェック */
-        string memory img = IImprintDescriptor(imprint.descriptor()).tokenImage(
-            1
-        );
+        string memory img = IImprintDescriptor(imprint.descriptor()).tokenImage(1);
         assertTrue(_startsWith(img, "data:image/svg+xml;base64,"));
     }
 
@@ -390,11 +331,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     /*───────────────────────────────────────────────────────────────*/
 
     /* イベント定義（Imprint と同一シグネチャ） */
-    event EditionCreated(
-        uint64 indexed editionNo,
-        string model,
-        uint64 timestamp
-    );
+    event EditionCreated(uint64 indexed editionNo, string model, uint64 timestamp);
     event EditionSealed(uint64 indexed editionNo);
 
     /* ❶ createEdition() がヘッダーを作成してイベントを Emit */
@@ -403,27 +340,17 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         string memory model = "GPT-UnitTest";
 
         /* --- イベント期待値 --- */
-        vm.expectEmit(
-            true, /*indexed*/
-            false,
-            false,
-            true
-        );
+        vm.expectEmit(true, /*indexed*/ false, false, true);
         emit EditionCreated(ed, model, uint64(block.timestamp));
 
         imprint.createEdition(ed, model);
 
         /* --- ストレージ検証 --- */
-        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(
-            ed
-        );
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(ed);
 
         assertEq(h.editionNo, ed);
         assertEq(h.model, model);
-        assertTrue(
-            h.timestamp >= uint64(block.timestamp) &&
-                h.timestamp <= uint64(block.timestamp) + 1
-        );
+        assertTrue(h.timestamp >= uint64(block.timestamp) && h.timestamp <= uint64(block.timestamp) + 1);
         assertFalse(h.isSealed);
 
         /* --- 二重作成は revert --- */
@@ -439,9 +366,7 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         emit EditionSealed(3);
         imprint.sealEdition(3);
 
-        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(
-            3
-        );
+        ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(3);
 
         assertTrue(h.isSealed);
 
@@ -663,17 +588,13 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         assertEq(mockSubject.getCallCount(), 2);
 
         // Verify first call parameters
-        (string memory name1, uint256 id1, uint64 ts1) = mockSubject.syncCalls(
-            0
-        );
+        (string memory name1, uint256 id1, uint64 ts1) = mockSubject.syncCalls(0);
         assertEq(name1, "Seed1");
         assertEq(id1, 1);
         assertEq(ts1, uint64(block.timestamp));
 
         // Verify second call parameters
-        (string memory name2, uint256 id2, uint64 ts2) = mockSubject.syncCalls(
-            1
-        );
+        (string memory name2, uint256 id2, uint64 ts2) = mockSubject.syncCalls(1);
         assertEq(name2, "Seed2");
         assertEq(id2, 2);
         assertEq(ts2, uint64(block.timestamp));
@@ -755,18 +676,10 @@ contract ImprintTest is TestHelper, IERC721Receiver {
 
     function testSupportsInterface() public view {
         // Should support INonFungibleSeaDropTokenUpgradeable
-        assertTrue(
-            imprint.supportsInterface(
-                type(INonFungibleSeaDropTokenUpgradeable).interfaceId
-            )
-        );
+        assertTrue(imprint.supportsInterface(type(INonFungibleSeaDropTokenUpgradeable).interfaceId));
 
         // Should support ISeaDropTokenContractMetadataUpgradeable
-        assertTrue(
-            imprint.supportsInterface(
-                type(ISeaDropTokenContractMetadataUpgradeable).interfaceId
-            )
-        );
+        assertTrue(imprint.supportsInterface(type(ISeaDropTokenContractMetadataUpgradeable).interfaceId));
 
         // Should support standard interfaces from parent
         assertTrue(imprint.supportsInterface(type(IERC721).interfaceId));

@@ -35,23 +35,15 @@ import {
     WorldCanonAlreadySet
 } from "../../src-upgradeable/src/ImprintLib.sol";
 
-import {
-    TransparentUpgradeableProxy
-} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {
-    ProxyAdmin
-} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
-import {
-    PublicDrop
-} from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
-import {
-    IERC721Receiver
-} from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import { TransparentUpgradeableProxy } from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
+import { IERC721Receiver } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 
 /**
  * @title WorldCanonEdgeCasesTest
  * @notice エッジケースとエラーシナリオの包括的テストスイート
- * 
+ *
  * テストカテゴリ:
  * 1. 境界値テスト（容量上限、時間制限など）
  * 2. エラーハンドリング検証
@@ -78,7 +70,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         // 基本セットアップ
         proxyAdmin = new ProxyAdmin();
         subject = new Subject("World Canon Subjects", "WCSBJ");
-        
+
         // Subject の所有者をownerに移転
         subject.transferOwnership(owner);
 
@@ -87,18 +79,11 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         allowedSeaDrop[0] = address(seadrop);
 
         bytes memory initData = abi.encodeWithSelector(
-            Imprint.initializeImprint.selector,
-            "WorldCanonImprint",
-            "WCIMP",
-            allowedSeaDrop,
-            owner
+            Imprint.initializeImprint.selector, "WorldCanonImprint", "WCIMP", allowedSeaDrop, owner
         );
 
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(implementation),
-            address(proxyAdmin),
-            initData
-        );
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
 
         imprint = Imprint(address(proxy));
         imprintViews = new ImprintViews(address(imprint));
@@ -109,11 +94,9 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         imprint.setDescriptor(address(imprintDescriptor));
         imprint.setMaxSupply(1000);
         imprint.setWorldCanon(address(subject));
-        
-        PublicDrop memory publicDrop = PublicDrop(
-            0.01 ether, uint48(block.timestamp), uint48(block.timestamp) + 1 days,
-            25, 250, false
-        );
+
+        PublicDrop memory publicDrop =
+            PublicDrop(0.01 ether, uint48(block.timestamp), uint48(block.timestamp) + 1 days, 25, 250, false);
         imprint.updatePublicDrop(address(seadrop), publicDrop);
         imprint.updateCreatorPayoutAddress(address(seadrop), owner);
         vm.stopPrank();
@@ -125,8 +108,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         vm.deal(user2, 10 ether);
     }
 
-    function onERC721Received(address, address, uint256, bytes calldata) 
-        external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -141,17 +123,17 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         console.log("Max Capacity Edition Creation Test started");
 
         vm.startPrank(owner);
-        
+
         // Edition作成
         imprint.createEdition(1, "MaxCapacityModel");
-        
+
         // 1000件のSeed作成（メモリ制限内で）
         uint256 batchSize = 100;
         uint256 totalSeeds = 1000;
-        
+
         for (uint256 batch = 0; batch < totalSeeds / batchSize; batch++) {
             SeedInput[] memory seeds = new SeedInput[](batchSize);
-            
+
             for (uint256 i = 0; i < batchSize; i++) {
                 uint256 globalIndex = batch * batchSize + i;
                 seeds[i] = SeedInput({
@@ -162,11 +144,11 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
                     desc: abi.encodePacked("Description_", _toString(globalIndex))
                 });
             }
-            
+
             imprint.addSeeds(seeds);
             console.log("Batch %d/%d completed", batch + 1, totalSeeds / batchSize);
         }
-        
+
         imprint.sealEdition(1);
         imprint.setActiveEdition(1);
         vm.stopPrank();
@@ -174,7 +156,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         // 検証
         assertEq(imprintViews.editionSize(1), totalSeeds, "Edition size incorrect");
         assertEq(imprintViews.remainingInEdition(1), totalSeeds, "Edition remaining count incorrect");
-        
+
         console.log("OK Max Capacity Edition Creation Test SUCCESS");
     }
 
@@ -235,15 +217,15 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // Seedなしでの封印試行（新しい未使用Edition番号を使用）
         imprint.createEdition(200, "EmptyEdition");
-        
+
         uint256 editionSize = imprintViews.editionSize(200);
         console.log("Edition 200 size before seal:", editionSize);
-        
+
         // 注意: 現在の実装では、Seedなしでも封印可能（設計判断）
         // 将来的にSeedsチェックが必要になった場合は、この行のコメントアウトを解除
         // vm.expectRevert(NoSeeds.selector);
         imprint.sealEdition(200);
-        
+
         // 封印が成功したことを確認
         ImprintStorage.EditionHeader memory sealedHeader = imprintViews.getEditionHeader(200);
         assertTrue(sealedHeader.isSealed, "Edition should be sealed");
@@ -269,27 +251,17 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // 重複するlocalIndex
         SeedInput[] memory duplicateSeeds = new SeedInput[](2);
-        duplicateSeeds[0] = SeedInput({
-            editionNo: 1, localIndex: 1, subjectId: 0,
-            subjectName: "Test1", desc: "Desc1"
-        });
-        duplicateSeeds[1] = SeedInput({
-            editionNo: 1, localIndex: 1, subjectId: 1,
-            subjectName: "Test2", desc: "Desc2"
-        });
+        duplicateSeeds[0] =
+            SeedInput({ editionNo: 1, localIndex: 1, subjectId: 0, subjectName: "Test1", desc: "Desc1" });
+        duplicateSeeds[1] =
+            SeedInput({ editionNo: 1, localIndex: 1, subjectId: 1, subjectName: "Test2", desc: "Desc2" });
         vm.expectRevert(DuplicateLocalIdx.selector);
         imprint.addSeeds(duplicateSeeds);
 
         // 異なるEditionの混在
         SeedInput[] memory mixedSeeds = new SeedInput[](2);
-        mixedSeeds[0] = SeedInput({
-            editionNo: 1, localIndex: 1, subjectId: 0,
-            subjectName: "Test1", desc: "Desc1"
-        });
-        mixedSeeds[1] = SeedInput({
-            editionNo: 2, localIndex: 1, subjectId: 1,
-            subjectName: "Test2", desc: "Desc2"
-        });
+        mixedSeeds[0] = SeedInput({ editionNo: 1, localIndex: 1, subjectId: 0, subjectName: "Test1", desc: "Desc1" });
+        mixedSeeds[1] = SeedInput({ editionNo: 2, localIndex: 1, subjectId: 1, subjectName: "Test2", desc: "Desc2" });
         vm.expectRevert(MixedEdition.selector);
         imprint.addSeeds(mixedSeeds);
 
@@ -389,8 +361,11 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         for (uint256 i = 0; i < 10; i++) {
             SeedInput[] memory singleSeed = new SeedInput[](1);
             singleSeed[0] = SeedInput({
-                editionNo: 1, localIndex: uint16(i + 1), subjectId: i,
-                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
+                editionNo: 1,
+                localIndex: uint16(i + 1),
+                subjectId: i,
+                subjectName: _toString(i),
+                desc: abi.encodePacked(_toString(i))
             });
             imprint.addSeeds(singleSeed);
         }
@@ -398,12 +373,15 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // 新しいEditionでバッチ追加
         imprint.createEdition(2, "BatchTestModel");
-        
+
         SeedInput[] memory batchSeeds = new SeedInput[](10);
         for (uint256 i = 0; i < 10; i++) {
             batchSeeds[i] = SeedInput({
-                editionNo: 2, localIndex: uint16(i + 1), subjectId: i,
-                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
+                editionNo: 2,
+                localIndex: uint16(i + 1),
+                subjectId: i,
+                subjectName: _toString(i),
+                desc: abi.encodePacked(_toString(i))
             });
         }
 
@@ -415,7 +393,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         console.log("Single addition gas usage: %d", singleGasUsed);
         console.log("Batch addition gas usage: %d", batchGasUsed);
-        
+
         // バッチの方が効率的であることを確認
         assertTrue(batchGasUsed < singleGasUsed, "Batch operation not efficient");
 
@@ -434,7 +412,7 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // 初期データ作成
         _createBasicEdition();
-        
+
         vm.prank(address(seadrop));
         imprint.mintSeaDrop(user1, 5);
 
@@ -448,15 +426,12 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
         // アップグレード実行
         vm.prank(proxyAdmin.owner());
-        proxyAdmin.upgrade(
-            TransparentUpgradeableProxy(payable(address(imprint))),
-            address(newImplementation)
-        );
+        proxyAdmin.upgrade(TransparentUpgradeableProxy(payable(address(imprint))), address(newImplementation));
 
         // アップグレード後の状態確認
         assertEq(imprint.totalSupply(), preUpgradeTotalSupply, "totalSupply changed");
         assertEq(imprint.ownerOf(1), preUpgradeOwner, "NFT owner changed");
-        
+
         ImprintStorage.EditionHeader memory postUpgradeEdition = imprintViews.getEditionHeader(1);
         assertEq(postUpgradeEdition.model, preUpgradeEdition.model, "Edition data changed");
 
@@ -467,19 +442,22 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
     }
 
     /*──────────── ヘルパー関数とコントラクト ────────────*/
-    
+
     function _createBasicEdition() internal {
         vm.startPrank(owner);
         imprint.createEdition(1, "BasicModel");
-        
+
         SeedInput[] memory seeds = new SeedInput[](50);
         for (uint16 i = 0; i < 50; i++) {
             seeds[i] = SeedInput({
-                editionNo: 1, localIndex: i + 1, subjectId: i,
-                subjectName: _toString(i), desc: abi.encodePacked(_toString(i))
+                editionNo: 1,
+                localIndex: i + 1,
+                subjectId: i,
+                subjectName: _toString(i),
+                desc: abi.encodePacked(_toString(i))
             });
         }
-        
+
         imprint.addSeeds(seeds);
         imprint.sealEdition(1);
         imprint.setActiveEdition(1);
@@ -488,21 +466,21 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
 
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) return "0";
-        
+
         uint256 temp = value;
         uint256 digits;
         while (temp != 0) {
             digits++;
             temp /= 10;
         }
-        
+
         bytes memory buffer = new bytes(digits);
         while (value != 0) {
             digits--;
             buffer[digits] = bytes1(uint8(48 + value % 10));
             value /= 10;
         }
-        
+
         return string(buffer);
     }
 }
@@ -531,12 +509,7 @@ contract MaliciousReentrancy is IERC721Receiver {
         target.mintSeaDrop(address(this), 1);
     }
 
-    function onERC721Received(
-        address,
-        address,
-        uint256,
-        bytes calldata
-    ) external override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external override returns (bytes4) {
         if (attacking) {
             attacking = false;
             // 再入試行
@@ -545,5 +518,5 @@ contract MaliciousReentrancy is IERC721Receiver {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    receive() external payable {}
+    receive() external payable { }
 }

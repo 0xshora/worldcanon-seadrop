@@ -1,8 +1,6 @@
 import { expect } from "chai";
 import { ethers, network } from "hardhat";
 
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-
 import { VERSION } from "./utils/helpers";
 
 import type {
@@ -13,6 +11,7 @@ import type {
   ProxyAdmin,
   Subject,
 } from "../typechain-types";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 /**
  * World Canon E2E Test Suite

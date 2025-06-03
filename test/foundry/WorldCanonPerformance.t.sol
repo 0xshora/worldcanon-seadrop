@@ -10,28 +10,17 @@ import { Imprint } from "../../src-upgradeable/src/Imprint.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
 import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
 
-import {
-    ImprintStorage,
-    SeedInput
-} from "../../src-upgradeable/src/ImprintLib.sol";
+import { ImprintStorage, SeedInput } from "../../src-upgradeable/src/ImprintLib.sol";
 
-import {
-    TransparentUpgradeableProxy
-} from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {
-    ProxyAdmin
-} from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
-import {
-    PublicDrop
-} from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
-import {
-    IERC721Receiver
-} from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
+import { TransparentUpgradeableProxy } from "openzeppelin-contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { ProxyAdmin } from "openzeppelin-contracts/proxy/transparent/ProxyAdmin.sol";
+import { PublicDrop } from "../../src-upgradeable/src/lib/SeaDropStructsUpgradeable.sol";
+import { IERC721Receiver } from "openzeppelin-contracts/token/ERC721/IERC721Receiver.sol";
 
 /**
  * @title WorldCanonPerformanceTest
  * @notice パフォーマンス、ガス効率性、スケーラビリティの包括的テスト
- * 
+ *
  * テストカテゴリ:
  * 1. ガス使用量の最適化検証
  * 2. 大量データ処理のスケーラビリティ
@@ -72,7 +61,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // 基本コントラクトデプロイ
         proxyAdmin = new ProxyAdmin();
         subject = new Subject("World Canon Subjects", "WCSBJ");
-        
+
         // Subject の所有者をownerに移転
         subject.transferOwnership(owner);
 
@@ -81,18 +70,11 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         allowedSeaDrop[0] = address(seadrop);
 
         bytes memory initData = abi.encodeWithSelector(
-            Imprint.initializeImprint.selector,
-            "WorldCanonImprint",
-            "WCIMP",
-            allowedSeaDrop,
-            owner
+            Imprint.initializeImprint.selector, "WorldCanonImprint", "WCIMP", allowedSeaDrop, owner
         );
 
-        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(implementation),
-            address(proxyAdmin),
-            initData
-        );
+        TransparentUpgradeableProxy proxy =
+            new TransparentUpgradeableProxy(address(implementation), address(proxyAdmin), initData);
 
         imprint = Imprint(address(proxy));
         imprintViews = new ImprintViews(address(imprint));
@@ -103,11 +85,9 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         imprint.setDescriptor(address(imprintDescriptor));
         imprint.setMaxSupply(10000);
         imprint.setWorldCanon(address(subject));
-        
-        PublicDrop memory publicDrop = PublicDrop(
-            0.01 ether, uint48(block.timestamp), uint48(block.timestamp) + 7 days,
-            25, 250, false
-        );
+
+        PublicDrop memory publicDrop =
+            PublicDrop(0.01 ether, uint48(block.timestamp), uint48(block.timestamp) + 7 days, 25, 250, false);
         imprint.updatePublicDrop(address(seadrop), publicDrop);
         imprint.updateCreatorPayoutAddress(address(seadrop), owner);
         vm.stopPrank();
@@ -118,8 +98,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         vm.deal(user2, 100 ether);
     }
 
-    function onERC721Received(address, address, uint256, bytes calldata) 
-        external pure override returns (bytes4) {
+    function onERC721Received(address, address, uint256, bytes calldata) external pure override returns (bytes4) {
         return IERC721Receiver.onERC721Received.selector;
     }
 
@@ -148,10 +127,10 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
 
         for (uint256 i = 0; i < batchSizes.length; i++) {
             uint256 batchSize = batchSizes[i];
-            
+
             // 新しいEditionを作成（テスト分離のため）
             imprint.createEdition(uint64(i + 2), string(abi.encodePacked("Model_", _toString(i))));
-            
+
             // Seeds準備
             SeedInput[] memory seeds = new SeedInput[](batchSize);
             for (uint256 j = 0; j < batchSize; j++) {
@@ -167,9 +146,9 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
             // ガス測定
             uint256 gasStart = gasleft();
             uint256 timeStart = block.timestamp;
-            
+
             imprint.addSeeds(seeds);
-            
+
             uint256 gasUsed = gasStart - gasleft();
             uint256 timeEnd = block.timestamp;
 
@@ -180,21 +159,17 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                 executionTime: timeEnd - timeStart
             });
 
-            console.log("Batch Size: %d, Total Gas: %d, Gas/Item: %d", 
-                       batchSize, gasUsed, gasUsed / batchSize);
+            console.log("Batch Size: %d, Total Gas: %d, Gas/Item: %d", batchSize, gasUsed, gasUsed / batchSize);
         }
 
         // 効率性の検証：最小バッチ(1)と中規模バッチ(100)の効率差を確認
-        uint256 singleItemGas = metrics[0].gasPerItem;      // バッチサイズ1
-        uint256 mediumBatchGas = metrics[3].gasPerItem;     // バッチサイズ100
-        
+        uint256 singleItemGas = metrics[0].gasPerItem; // バッチサイズ1
+        uint256 mediumBatchGas = metrics[3].gasPerItem; // バッチサイズ100
+
         // 100倍のバッチサイズで少なくとも20%の効率改善があることを確認
         uint256 efficiencyImprovement = ((singleItemGas - mediumBatchGas) * 100) / singleItemGas;
-        assertTrue(
-            efficiencyImprovement >= 20,
-            "Batch processing should improve efficiency by at least 20%"
-        );
-        
+        assertTrue(efficiencyImprovement >= 20, "Batch processing should improve efficiency by at least 20%");
+
         console.log("Efficiency improvement: %d%%", efficiencyImprovement);
 
         vm.stopPrank();
@@ -214,8 +189,10 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         string[] memory testDescriptions = new string[](4);
         testDescriptions[0] = "Short desc";
         testDescriptions[1] = "Medium length description that spans multiple words and contains meaningful content";
-        testDescriptions[2] = "Very long description that contains extensive details about the subject matter, including philosophical perspectives, historical context, and contemporary relevance that would typically be generated by advanced language models";
-        testDescriptions[3] = "Extremely comprehensive description that goes into extraordinary detail about every aspect of the subject, covering historical significance, philosophical implications, cultural context, scientific understanding, artistic interpretations, and future projections, representing the kind of thorough analysis that advanced AI systems might produce when given unlimited token budgets";
+        testDescriptions[2] =
+            "Very long description that contains extensive details about the subject matter, including philosophical perspectives, historical context, and contemporary relevance that would typically be generated by advanced language models";
+        testDescriptions[3] =
+            "Extremely comprehensive description that goes into extraordinary detail about every aspect of the subject, covering historical significance, philosophical implications, cultural context, scientific understanding, artistic interpretations, and future projections, representing the kind of thorough analysis that advanced AI systems might produce when given unlimited token budgets";
 
         uint256[] memory gasUsages = new uint256[](4);
 
@@ -233,8 +210,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
             imprint.addSeeds(seeds);
             gasUsages[i] = gasStart - gasleft();
 
-            console.log("Description Length: %d bytes, Gas Used: %d", 
-                       bytes(testDescriptions[i]).length, gasUsages[i]);
+            console.log("Description Length: %d bytes, Gas Used: %d", bytes(testDescriptions[i]).length, gasUsages[i]);
         }
 
         // SSTORE2のスケーラビリティ検証：長いデータでも効率的であることを確認
@@ -243,7 +219,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         uint256 longGas = gasUsages[3];
         uint256 shortLength = bytes(testDescriptions[0]).length;
         uint256 longLength = bytes(testDescriptions[3]).length;
-        
+
         uint256 gasPerByte = (longGas - shortGas) * 1000 / (longLength - shortLength);
         console.log("Gas per byte (extrapolated): %d", gasPerByte);
 
@@ -274,14 +250,14 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
 
         for (uint256 batch = 0; batch < batches; batch++) {
             string[] memory subjectBatch = new string[](batchSize);
-            
+
             for (uint256 i = 0; i < batchSize; i++) {
                 uint256 globalIndex = batch * batchSize + i;
                 subjectBatch[i] = string(abi.encodePacked("Subject_", _toString(globalIndex)));
             }
 
             uint256 gasStart = gasleft();
-            
+
             if (batch == 0) {
                 // 初回は mintInitial
                 vm.prank(owner);
@@ -291,17 +267,17 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                 vm.prank(owner);
                 subject.addSubjects(subjectBatch, uint64(batch));
             }
-            
+
             uint256 gasUsed = gasStart - gasleft();
             totalGasUsed += gasUsed;
 
-            // console.log("Batch %s/%s: %s subjects, Gas: %s", 
+            // console.log("Batch %s/%s: %s subjects, Gas: %s",
             //            _toString(batch + 1), _toString(batches), _toString(batchSize), _toString(gasUsed));
         }
 
         // 検証
         assertEq(subject.totalSupply(), totalSubjects, "Total Subject count incorrect");
-        
+
         console.log("Total Gas Used for %d subjects: %d", totalSubjects, totalGasUsed);
         console.log("Average Gas per Subject: %d", totalGasUsed / totalSubjects);
 
@@ -336,7 +312,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
 
             for (uint256 batch = 0; batch < seedBatches; batch++) {
                 SeedInput[] memory seeds = new SeedInput[](seedBatchSize);
-                
+
                 for (uint256 i = 0; i < seedBatchSize; i++) {
                     uint256 localIndex = batch * seedBatchSize + i + 1;
                     seeds[i] = SeedInput({
@@ -365,7 +341,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // 検証
         for (uint256 ed = 1; ed <= editionCount; ed++) {
             assertEq(imprintViews.editionSize(uint64(ed)), seedsPerEdition, "Edition size incorrect");
-            
+
             ImprintStorage.EditionHeader memory header = imprintViews.getEditionHeader(uint64(ed));
             assertTrue(header.isSealed, "Edition not sealed");
         }
@@ -395,14 +371,14 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // テスト用Edition準備
         vm.startPrank(owner);
         imprint.createEdition(1, "HighVolumeModel");
-        
+
         // 1000件のSeeds作成（大量ミントテスト用）
         uint256 totalSeeds = 1000;
         uint256 batchSize = 100;
-        
+
         for (uint256 batch = 0; batch < totalSeeds / batchSize; batch++) {
             SeedInput[] memory seeds = new SeedInput[](batchSize);
-            
+
             for (uint256 i = 0; i < batchSize; i++) {
                 uint256 globalIndex = batch * batchSize + i;
                 seeds[i] = SeedInput({
@@ -413,10 +389,10 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
                     desc: abi.encodePacked("HV_Desc_", _toString(globalIndex))
                 });
             }
-            
+
             imprint.addSeeds(seeds);
         }
-        
+
         imprint.sealEdition(1);
         imprint.setActiveEdition(1);
         vm.stopPrank();
@@ -424,7 +400,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // 複数ユーザーによる大量ミント実行
         uint256[] memory mintQuantities = new uint256[](3);
         mintQuantities[0] = 25; // user1: 最大制限
-        mintQuantities[1] = 25; // user2: 最大制限  
+        mintQuantities[1] = 25; // user2: 最大制限
         mintQuantities[2] = 25; // このコントラクト: 最大制限
 
         uint256[] memory gasUsages = new uint256[](3);
@@ -450,7 +426,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         // パフォーマンス分析
         uint256 totalMinted = mintQuantities[0] + mintQuantities[1] + mintQuantities[2];
         uint256 totalGas = gasUsages[0] + gasUsages[1] + gasUsages[2];
-        
+
         console.log("User1 mint: %d NFTs, Gas: %d", mintQuantities[0], gasUsages[0]);
         console.log("User2 mint: %d NFTs, Gas: %d", mintQuantities[1], gasUsages[1]);
         console.log("Contract mint: %d NFTs, Gas: %d", mintQuantities[2], gasUsages[2]);
@@ -470,24 +446,24 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
     }
 
     /*──────────── ヘルパー関数 ────────────*/
-    
+
     function _toString(uint256 value) internal pure returns (string memory) {
         if (value == 0) return "0";
-        
+
         uint256 temp = value;
         uint256 digits;
         while (temp != 0) {
             digits++;
             temp /= 10;
         }
-        
+
         bytes memory buffer = new bytes(digits);
         while (value != 0) {
             digits--;
             buffer[digits] = bytes1(uint8(48 + value % 10));
             value /= 10;
         }
-        
+
         return string(buffer);
     }
 }

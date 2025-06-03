@@ -23,24 +23,19 @@ contract ERC721SeaDropPausable is ERC721SeaDrop {
      * @notice Deploy the token contract with its name, symbol,
      *         and allowed SeaDrop addresses.
      */
-    constructor(
-        string memory name,
-        string memory symbol,
-        address[] memory allowedSeaDrop
-    ) ERC721SeaDrop(name, symbol, allowedSeaDrop) {
+    constructor(string memory name, string memory symbol, address[] memory allowedSeaDrop)
+        ERC721SeaDrop(name, symbol, allowedSeaDrop)
+    {
         emit TransfersPausedChanged(transfersPaused);
     }
 
+    // solhint-disable-next-line comprehensive-interface
     function updateTransfersPaused(bool paused) external onlyOwner {
         transfersPaused = paused;
         emit TransfersPausedChanged(paused);
     }
 
-    function setApprovalForAll(address operator, bool approved)
-        public
-        virtual
-        override
-    {
+    function setApprovalForAll(address operator, bool approved) public virtual override {
         if (transfersPaused) {
             revert TransfersPaused();
         }
@@ -54,12 +49,11 @@ contract ERC721SeaDropPausable is ERC721SeaDrop {
         super.approve(to, tokenId);
     }
 
-    function _beforeTokenTransfers(
-        address from,
-        address to,
-        uint256 startTokenId,
-        uint256 quantity
-    ) internal virtual override {
+    function _beforeTokenTransfers(address from, address to, uint256 startTokenId, uint256 quantity)
+        internal
+        virtual
+        override
+    {
         if (from != address(0) && transfersPaused) {
             revert TransfersPaused();
         }
