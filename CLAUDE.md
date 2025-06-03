@@ -166,3 +166,55 @@ if (ts > subjectMeta[tokenId].latestTimestamp) {
 - SSTORE2使用時: ~82,000 gas/byte（実測値）
 - Subject処理: ~101,000 gas/subject（実測値）
 - Seed処理: ~154,000 gas/seed（実測値）
+
+## 🔧 プロジェクト構造と設定の重要な注意点
+
+### デュアルプロジェクト構造
+このリポジトリは2つの独立したHardhatプロジェクトを含んでいます：
+
+1. **ルートプロジェクト** (`src/`ディレクトリ用)
+   - 設定ファイル: `./hardhat.config.ts`
+   - ソースディレクトリ: `./src`
+   - remappings: `./remappings.txt`
+   - 用途: 通常のSeaDropコントラクト
+
+2. **src-upgradeableプロジェクト** (`src-upgradeable/src/`ディレクトリ用)
+   - 設定ファイル: `./src-upgradeable/hardhat.config.ts`
+   - ソースディレクトリ: `./src-upgradeable/src`（相対パス）
+   - remappings: `./src-upgradeable/remappings.txt`
+   - 用途: アップグレード可能なWorld Canonコントラクト
+
+### ⚠️ パス関連の頻出エラーと解決策
+
+#### エラー1: `File ../lib/../lib/ERC721A-Upgradeable/contracts/contracts/ERC721AUpgradeable.sol not found`
+**原因**: ルートの`hardhat.config.ts`のsourcesパスを誤って`./src-upgradeable/src`に変更
+**解決策**: ルートの`hardhat.config.ts`は`sources: "./src"`のまま維持
+
+#### エラー2: src-upgradeableのビルドが失敗
+**原因**: src-upgradeable用の独自のhardhat.config.tsが存在することを忘れている
+**解決策**: 
+```bash
+cd src-upgradeable && npx hardhat compile
+# または
+yarn test:upgradeable
+```
+
+### 正しいビルド・テストコマンド
+
+```bash
+# ルートプロジェクト（src/）
+yarn build                    # src/のコンパイル
+yarn test                     # src/のテスト
+
+# src-upgradeableプロジェクト
+cd src-upgradeable && npx hardhat compile    # コンパイル
+yarn test:upgradeable                         # テスト（ルートから実行）
+
+# Foundryテスト（両方のプロジェクトをカバー）
+forge test
+```
+
+### importパス修正時の注意
+- **絶対に変更しない**: OSSファイル（ERC721ContractMetadataUpgradeable.solなど）のimportパス
+- **変更する場合**: remappings.txtで対応（コントラクト自体は変更しない）
+- **デバッグ方法**: どちらのhardhat.config.tsが使われているか確認

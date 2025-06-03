@@ -26,7 +26,7 @@ import {
     IERC165
 } from "openzeppelin-contracts/utils/introspection/IERC165.sol";
 
-/**
+/*
  * @title  ERC721ContractMetadata
  * @author James Wenzel (emo.eth)
  * @author Ryan Ghods (ralxz.eth)

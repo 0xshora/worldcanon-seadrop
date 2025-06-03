@@ -24,7 +24,10 @@
       "Bash(yarn install)",
       "Bash(sed:*)",
       "Bash(yarn lint:check)",
-      "Bash(afplay:*)"
+      "Bash(afplay:*)",
+      "Bash(gh pr view:*)",
+      "Bash(tree:*)",
+      "Bash(yarn build)"
     ]
   },
   "enableAllProjectMcpServers": false
