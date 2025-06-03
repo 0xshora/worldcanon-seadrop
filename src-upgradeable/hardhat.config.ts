@@ -60,23 +60,23 @@ module.exports = {
         chainId: 8453,
         urls: {
           apiURL: "https://api.basescan.org/api",
-          browserURL: "https://basescan.org"
-        }
+          browserURL: "https://basescan.org",
+        },
       },
       {
         network: "base-sepolia",
         chainId: 84532,
         urls: {
           apiURL: "https://api-sepolia.basescan.org/api",
-          browserURL: "https://sepolia.basescan.org"
-        }
-      }
-    ]
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+    ],
   },
-  paths: { 
+  paths: {
     sources: "./src",
     cache: "./cache",
-    artifacts: "./artifacts" 
+    artifacts: "./artifacts",
   },
   preprocess: {
     eachLine: (hre: any) => ({

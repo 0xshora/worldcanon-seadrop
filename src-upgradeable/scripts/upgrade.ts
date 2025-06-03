@@ -2,7 +2,9 @@ import fs from "fs";
 import { ethers, upgrades } from "hardhat";
 
 async function main() {
-  const ERC721SeaDropUpgradeable = await ethers.getContractFactory("ERC721SeaDropUpgradeable");
+  const ERC721SeaDropUpgradeable = await ethers.getContractFactory(
+    "ERC721SeaDropUpgradeable"
+  );
 
   console.log("Upgrading...");
 
@@ -10,7 +12,10 @@ async function main() {
     fs.readFileSync("deployment-addresses.json").toString()
   );
 
-  const result = await upgrades.upgradeProxy(addresses.proxy, ERC721SeaDropUpgradeable);
+  const result = await upgrades.upgradeProxy(
+    addresses.proxy,
+    ERC721SeaDropUpgradeable
+  );
   await result.deployTransaction.wait();
 
   console.log("Upgraded");

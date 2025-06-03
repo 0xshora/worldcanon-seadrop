@@ -13,10 +13,7 @@ interface ISeaDropTokenContractMetadata is IERC2981 {
     /**
      * @notice Throw if the max supply exceeds the total minted.
      */
-    error NewMaxSupplyCannotBeLessThenTotalMinted(
-        uint256 got,
-        uint256 totalMinted
-    );
+    error NewMaxSupplyCannotBeLessThenTotalMinted(uint256 got, uint256 totalMinted);
 
     /**
      * @dev Revert with an error when attempting to set the provenance

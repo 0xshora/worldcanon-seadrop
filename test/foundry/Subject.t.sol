@@ -26,40 +26,27 @@ contract SubjectTest is Test {
     address bob = address(0xB);
 
     /*── イベントを再宣言（テスト用） ──*/
-    event LatestImprintUpdated(
-        uint256 indexed tokenId,
-        uint256 indexed imprintId
-    );
+    event LatestImprintUpdated(uint256 indexed tokenId, uint256 indexed imprintId);
 
     /*──────────── Helpers ────────────*/
-    function _names1(string memory a)
-        internal
-        pure
-        returns (string[] memory arr)
-    {
+    function _names1(string memory a) internal pure returns (string[] memory arr) {
         arr = new string[](1);
         arr[0] = a;
     }
 
-    function _names2(string memory a, string memory b)
-        internal
-        pure
-        returns (string[] memory arr)
-    {
+    function _names2(string memory a, string memory b) internal pure returns (string[] memory arr) {
         arr = new string[](2);
         arr[0] = a;
         arr[1] = b;
     }
 
-    function _startsWith(string memory s, string memory prefix)
-        internal
-        pure
-        returns (bool)
-    {
+    function _startsWith(string memory s, string memory prefix) internal pure returns (bool) {
         bytes memory A = bytes(s);
         bytes memory P = bytes(prefix);
         if (P.length > A.length) return false;
-        for (uint256 i; i < P.length; ++i) if (A[i] != P[i]) return false;
+        for (uint256 i; i < P.length; ++i) {
+            if (A[i] != P[i]) return false;
+        }
         return true;
     }
 
@@ -98,7 +85,7 @@ contract SubjectTest is Test {
         string[] memory more = _names2("Gamma", "Delta");
         subject.addSubjects(more, 42);
         assertEq(subject.totalSupply(), 3);
-        (uint64 ed, , ) = subject.subjectMeta(2);
+        (uint64 ed,,) = subject.subjectMeta(2);
         assertEq(ed, 42);
     }
 
@@ -115,7 +102,7 @@ contract SubjectTest is Test {
         vm.expectEmit(true, true, false, true);
         emit LatestImprintUpdated(0, 777);
         subject.setLatest(0, 777);
-        (, uint256 latest, ) = subject.subjectMeta(0);
+        (, uint256 latest,) = subject.subjectMeta(0);
         assertEq(latest, 777);
     }
 

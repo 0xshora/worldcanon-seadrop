@@ -7,9 +7,7 @@ import { SeaDrop } from "seadrop/SeaDrop.sol";
 
 import { ERC721SeaDrop } from "seadrop/ERC721SeaDrop.sol";
 
-import {
-    INonFungibleSeaDropToken
-} from "seadrop/interfaces/INonFungibleSeaDropToken.sol";
+import { INonFungibleSeaDropToken } from "seadrop/interfaces/INonFungibleSeaDropToken.sol";
 
 import { PublicDrop } from "seadrop/lib/SeaDropStructs.sol";
 
@@ -57,7 +55,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
             1, // max mints per wallet
             100, // fee (1%)
             false // if false, allow any fee recipient
-            // If true, then only the fee recipient can perform the attack
+                // If true, then only the fee recipient can perform the attack
         );
         vm.prank(address(token));
         seadrop.updatePublicDrop(publicDrop);
@@ -68,12 +66,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         assert(attacker.startAttack());
 
         assertEq(token.balanceOf(address(attacker)), 0);
-        assertEq(
-            uint256(
-                seadrop.getPublicDrop(address(token)).maxTotalMintableByWallet
-            ),
-            1
-        );
+        assertEq(uint256(seadrop.getPublicDrop(address(token)).maxTotalMintableByWallet), 1);
 
         // expect fail on reentrancy
         vm.expectRevert("ETH_TRANSFER_FAILED");
@@ -91,12 +84,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         uint256 preFeeRecipientBalance = args.feeRecipient.balance;
         uint256 preCreatorBalance = creator.balance;
 
-        seadrop.mintPublic{ value: mintValue }(
-            address(token),
-            args.feeRecipient,
-            args.minter,
-            args.numMints
-        );
+        seadrop.mintPublic{ value: mintValue }(address(token), args.feeRecipient, args.minter, args.numMints);
 
         // Check minter token balance increased.
         assertEq(token.balanceOf(args.minter), args.numMints);
@@ -113,31 +101,18 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         assertEq(preCreatorBalance + payoutAmount, creator.balance);
     }
 
-    function testMintPublic_incorrectPayment(FuzzInputs memory args)
-        public
-        validateArgs(args)
-    {
+    function testMintPublic_incorrectPayment(FuzzInputs memory args) public validateArgs(args) {
         PublicDrop memory publicDrop = seadrop.getPublicDrop(address(token));
         uint256 mintValue = args.numMints * publicDrop.mintPrice;
 
-        vm.expectRevert(
-            abi.encodeWithSelector(IncorrectPayment.selector, 1, mintValue)
-        );
+        vm.expectRevert(abi.encodeWithSelector(IncorrectPayment.selector, 1, mintValue));
 
         hoax(args.minter, 100 ether);
 
-        seadrop.mintPublic{ value: 1 wei }(
-            address(token),
-            args.feeRecipient,
-            args.minter,
-            args.numMints
-        );
+        seadrop.mintPublic{ value: 1 wei }(address(token), args.feeRecipient, args.minter, args.numMints);
     }
 
-    function testMintPublic_freeMint(FuzzInputs memory args)
-        public
-        validateArgs(args)
-    {
+    function testMintPublic_freeMint(FuzzInputs memory args) public validateArgs(args) {
         // Create public drop object with free mint.
         PublicDrop memory publicDrop = PublicDrop(
             0 ether, // mint price (free)
@@ -154,21 +129,13 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
 
         vm.prank(args.minter);
 
-        seadrop.mintPublic(
-            address(token),
-            args.feeRecipient,
-            args.minter,
-            args.numMints
-        );
+        seadrop.mintPublic(address(token), args.feeRecipient, args.minter, args.numMints);
 
         // Check minter token balance increased.
         assertEq(token.balanceOf(args.minter), args.numMints);
     }
 
-    function testMintPublic_differentPayerThanMinter(FuzzInputs memory args)
-        public
-        validateArgs(args)
-    {
+    function testMintPublic_differentPayerThanMinter(FuzzInputs memory args) public validateArgs(args) {
         PublicDrop memory publicDrop = seadrop.getPublicDrop(address(token));
 
         address payer = makeAddr("payer");
@@ -176,11 +143,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         // Allow the payer.
         token.updatePayer(address(seadrop), payer, true);
 
-        vm.assume(
-            payer != creator &&
-                payer != args.minter &&
-                payer != args.feeRecipient
-        );
+        vm.assume(payer != creator && payer != args.minter && payer != args.feeRecipient);
 
         hoax(payer, 100 ether);
 
@@ -190,12 +153,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         uint256 preFeeRecipientBalance = args.feeRecipient.balance;
         uint256 preCreatorBalance = creator.balance;
 
-        seadrop.mintPublic{ value: mintValue }(
-            address(token),
-            args.feeRecipient,
-            args.minter,
-            args.numMints
-        );
+        seadrop.mintPublic{ value: mintValue }(address(token), args.feeRecipient, args.minter, args.numMints);
 
         // Check minter token balance increased.
         assertEq(token.balanceOf(args.minter), args.numMints);
@@ -212,10 +170,7 @@ contract ERC721SeaDropMintPublicTest is TestHelper {
         assertEq(preCreatorBalance + payoutAmount, creator.balance);
     }
 
-    function testMintSeaDrop_revertNonSeaDrop(FuzzInputs memory args)
-        public
-        validateArgs(args)
-    {
+    function testMintSeaDrop_revertNonSeaDrop(FuzzInputs memory args) public validateArgs(args) {
         vm.expectRevert(INonFungibleSeaDropToken.OnlyAllowedSeaDrop.selector);
         token.mintSeaDrop(args.minter, args.numMints);
     }
