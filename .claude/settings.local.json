@@ -21,7 +21,10 @@
       "Bash(npx hardhat run:*)",
       "Bash(npx hardhat compile:*)",
       "Bash(git commit:*)",
-      "Bash(yarn install)"
+      "Bash(yarn install)",
+      "Bash(sed:*)",
+      "Bash(yarn lint:check)",
+      "Bash(afplay:*)"
     ]
   },
   "enableAllProjectMcpServers": false

@@ -16,8 +16,13 @@ import "@openzeppelin/hardhat-upgrades";
 // Re-run `forge remappings > remappings.txt`
 // every time you modify libraries in Foundry.
 function getRemappings() {
+  // Check if we have src-upgradeable specific remappings
+  const remappingsPath = fs.existsSync("src-upgradeable/remappings.txt") 
+    ? "src-upgradeable/remappings.txt" 
+    : "remappings.txt";
+  
   return fs
-    .readFileSync("remappings.txt", "utf8")
+    .readFileSync(remappingsPath, "utf8")
     .split("\n")
     .filter(Boolean) // remove empty lines
     .map((line: string) => line.trim().split("="));
@@ -110,7 +115,10 @@ const config: HardhatUserConfig = {
     }),
   },
   // specify separate cache for hardhat, since it could possibly conflict with foundry's
-  paths: { sources: "./src", cache: "./hh-cache" },
+  paths: { 
+    sources: "./src-upgradeable/src", 
+    cache: "./hh-cache" 
+  },
 };
 
 export default config;
