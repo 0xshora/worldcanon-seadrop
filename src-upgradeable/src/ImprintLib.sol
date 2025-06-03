@@ -97,6 +97,7 @@ error NoSeeds();
 error MintingPaused();
 error NoActiveEdition();
 error SoldOut();
+error InvalidTimestamp();
 error TokenNonexistent();
 error DescriptorUnset();
 error DescriptorFail();
@@ -117,13 +118,25 @@ library ImprintLib {
     function createEditionWithEvent(uint64 editionNo, string calldata model)
         external
     {
+        // timestampを指定しない場合はblock.timestampを使用
+        _createEditionWithEvent(editionNo, model, uint64(block.timestamp));
+    }
+
+    function createEditionWithEvent(uint64 editionNo, string calldata model, uint64 timestamp)
+        external
+    {
+        // timestampを指定する場合はその値を使用
+        _createEditionWithEvent(editionNo, model, timestamp);
+    }
+
+    function _createEditionWithEvent(uint64 editionNo, string calldata model, uint64 timestamp) internal {
         if (editionNo == 0) revert InvalidEditionNo();
         if (bytes(model).length == 0) revert EmptyModel();
+        if (timestamp == 0) revert InvalidTimestamp();
 
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         if (st.editionHeaders[editionNo].editionNo != 0) revert EditionExists();
 
-        uint64 timestamp = uint64(block.timestamp);
         st.editionHeaders[editionNo] = ImprintStorage.EditionHeader({
             editionNo: editionNo,
             model: model,
@@ -240,15 +253,26 @@ library ImprintLib {
     }
 
     function createEdition(uint64 editionNo, string calldata model) external {
+        // timestampを指定しない場合はblock.timestampを使用
+        _createEdition(editionNo, model, uint64(block.timestamp));
+    }
+
+    function createEdition(uint64 editionNo, string calldata model, uint64 timestamp) external {
+        // timestampを指定する場合はその値を使用
+        _createEdition(editionNo, model, timestamp);
+    }
+
+    function _createEdition(uint64 editionNo, string calldata model, uint64 timestamp) internal {
         if (editionNo == 0) revert InvalidEditionNo();
         if (bytes(model).length == 0) revert EmptyModel();
+        if (timestamp == 0) revert InvalidTimestamp();
 
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         if (st.editionHeaders[editionNo].editionNo != 0) revert EditionExists();
         st.editionHeaders[editionNo] = ImprintStorage.EditionHeader({
             editionNo: editionNo,
             model: model,
-            timestamp: uint64(block.timestamp),
+            timestamp: timestamp,
             isSealed: false
         });
     }

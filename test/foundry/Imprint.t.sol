@@ -27,7 +27,8 @@ import {
     TokenNonexistent,
     DescriptorUnset,
     DescriptorFail,
-    WorldCanonAlreadySet
+    WorldCanonAlreadySet,
+    InvalidTimestamp
 } from "../../src-upgradeable/src/ImprintLib.sol";
 import { ImprintViews } from "../../src-upgradeable/src/ImprintViews.sol";
 import { ImprintDescriptor } from "../../src-upgradeable/src/ImprintDescriptor.sol";
@@ -684,5 +685,69 @@ contract ImprintTest is TestHelper, IERC721Receiver {
         // Should support standard interfaces from parent
         assertTrue(imprint.supportsInterface(type(IERC721).interfaceId));
         assertTrue(imprint.supportsInterface(type(IERC165).interfaceId));
+    }
+
+    /*───────────────────────────────────────────────────────────────*/
+    /*                    Custom Timestamp Tests                      */
+    /*───────────────────────────────────────────────────────────────*/
+
+    function testCreateEditionWithCustomTimestamp() public {
+        // 過去のタイムスタンプでEdition作成（例：GPT-3.5の実際のリリース日）
+        uint64 customTimestamp = 1668470400; // 2022年11月15日 UTC
+        
+        imprint.createEdition(10, "GPT-3.5", customTimestamp);
+        
+        // タイムスタンプが正しく設定されているか確認
+        ImprintStorage.EditionHeader memory header = imprint.getEditionHeader(10);
+        assertEq(header.timestamp, customTimestamp, "Custom timestamp not set correctly");
+        assertEq(header.model, "GPT-3.5", "Model name incorrect");
+        assertEq(header.editionNo, 10, "Edition number incorrect");
+        assertFalse(header.isSealed, "Edition should not be sealed initially");
+    }
+
+    function testCreateEditionWithoutTimestamp() public {
+        // タイムスタンプを指定しない場合はblock.timestampが使用される
+        uint256 beforeTimestamp = block.timestamp;
+        
+        imprint.createEdition(11, "GPT-4o");
+        
+        uint256 afterTimestamp = block.timestamp;
+        
+        // タイムスタンプがblock.timestamp範囲内にあることを確認
+        ImprintStorage.EditionHeader memory header = imprint.getEditionHeader(11);
+        assertGe(header.timestamp, beforeTimestamp, "Timestamp should be >= before timestamp");
+        assertLe(header.timestamp, afterTimestamp, "Timestamp should be <= after timestamp");
+        assertEq(header.model, "GPT-4o", "Model name incorrect");
+    }
+
+    function testCreateEditionWithZeroTimestampReverts() public {
+        // timestamp = 0 でエラーになることを確認
+        vm.expectRevert(abi.encodeWithSelector(InvalidTimestamp.selector));
+        imprint.createEdition(12, "Invalid-Model", 0);
+    }
+
+    function testCreateEditionBothTimestampVariants() public {
+        // 両方のvariantが正しく動作することを確認
+        uint64 customTimestamp = 1640995200; // 2022年1月1日 UTC
+        
+        // Variant 1: timestamp指定なし
+        imprint.createEdition(13, "Model-A");
+        
+        // Variant 2: timestamp指定あり
+        imprint.createEdition(14, "Model-B", customTimestamp);
+        
+        // 結果確認
+        ImprintStorage.EditionHeader memory headerA = imprint.getEditionHeader(13);
+        ImprintStorage.EditionHeader memory headerB = imprint.getEditionHeader(14);
+        
+        // Model-A は現在時刻に近い
+        assertGe(headerA.timestamp, uint64(block.timestamp - 1), "Model-A timestamp should be recent");
+        
+        // Model-B は指定した時刻
+        assertEq(headerB.timestamp, customTimestamp, "Model-B timestamp should match custom value");
+        
+        // モデル名確認
+        assertEq(headerA.model, "Model-A", "Model-A name incorrect");
+        assertEq(headerB.model, "Model-B", "Model-B name incorrect");
     }
 }

@@ -20,7 +20,8 @@ import {
     TokenNonexistent,
     DescriptorUnset,
     DescriptorFail,
-    WorldCanonAlreadySet
+    WorldCanonAlreadySet,
+    InvalidTimestamp
 } from "./ImprintLib.sol";
 
 /*
@@ -57,6 +58,13 @@ contract Imprint is ERC721SeaDropUpgradeable {
         onlyOwner
     {
         ImprintLib.createEditionWithEvent(editionNo, model);
+    }
+
+    function createEdition(uint64 editionNo, string calldata model, uint64 timestamp)
+        external
+        onlyOwner
+    {
+        ImprintLib.createEditionWithEvent(editionNo, model, timestamp);
     }
 
     function sealEdition(uint64 editionNo) external onlyOwner {
