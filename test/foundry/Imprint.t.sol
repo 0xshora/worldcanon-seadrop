@@ -363,12 +363,27 @@ contract ImprintTest is TestHelper, IERC721Receiver {
     function testSealEdition() public {
         imprint.createEdition(3, "Claude-3.7");
 
+        // Seedなしでの封印は失敗する（修正後の動作）
+        vm.expectRevert(NoSeeds.selector);
+        imprint.sealEdition(3);
+
+        // Seedを追加
+        SeedInput[] memory seeds = new SeedInput[](1);
+        seeds[0] = SeedInput({
+            editionNo: 3,
+            localIndex: 1,
+            subjectId: 0,
+            subjectName: "TestSubject",
+            desc: "Test description for sealing"
+        });
+        imprint.addSeeds(seeds);
+
+        // 今度は封印が成功する
         vm.expectEmit(true, false, false, true);
         emit EditionSealed(3);
         imprint.sealEdition(3);
 
         ImprintStorage.EditionHeader memory h = imprintViews.getEditionHeader(3);
-
         assertTrue(h.isSealed);
 
         /* --- 既に sealed 済みの Edition を再度 seal すると revert --- */

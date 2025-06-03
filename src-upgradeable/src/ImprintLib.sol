@@ -152,6 +152,7 @@ library ImprintLib {
         ImprintStorage.EditionHeader storage h = st.editionHeaders[editionNo];
         if (h.editionNo == 0) revert UnknownEdition();
         if (h.isSealed) revert AlreadySealed();
+        if (st.firstSeedId[editionNo] == 0) revert NoSeeds();
         h.isSealed = true;
 
         emit EditionSealed(editionNo);
