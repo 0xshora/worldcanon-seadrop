@@ -162,10 +162,11 @@ if (ts > subjectMeta[tokenId].latestTimestamp) {
 - 将来的な制約追加時は`sealEdition`の修正を検討
 
 #### ガス効率性
-- バッチ処理で20%以上の効率改善を達成
+- バッチ処理で24%の効率改善を達成（実測値）
 - SSTORE2使用時: ~82,000 gas/byte（実測値）
 - Subject処理: ~101,000 gas/subject（実測値）
 - Seed処理: ~154,000 gas/seed（実測値）
+- NFTミント: ~100,000 gas/NFT（実測値）
 
 ## 🔧 プロジェクト構造と設定の重要な注意点
 

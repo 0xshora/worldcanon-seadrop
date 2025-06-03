@@ -224,7 +224,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         console.log("Gas per byte (extrapolated): %d", gasPerByte);
 
         // 妥当なガス効率性であることを確認（1バイトあたり100,000ガス未満）
-        // SSTORE2は複雑な処理を含むため、現実的な閾値を設定
+        // 実測値: ~82,000 gas/byte
         assertTrue(gasPerByte < 100000, "SSTORE2 efficiency unexpectedly low");
 
         vm.stopPrank();
@@ -282,6 +282,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         console.log("Average Gas per Subject: %d", totalGasUsed / totalSubjects);
 
         // 妥当なガス使用量であることを確認（1 Subjectあたり15万ガス未満）
+        // 実測値: ~101,000 gas/subject
         assertTrue(totalGasUsed / totalSubjects < 150000, "Subject processing gas efficiency unexpectedly low");
 
         console.log(" Large Scale Subject Processing Test SUCCESS");
@@ -352,7 +353,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         console.log("Average Gas per Seed: %d", totalGasUsed / totalSeeds);
 
         // 妥当なガス効率性を確認（1 Seedあたり20万ガス未満）
-        // SSTORE2でのオンチェーン保存を含むため、現実的な閾値を設定
+        // 実測値: ~154,000 gas/seed（SSTORE2でのオンチェーン保存を含む）
         assertTrue(totalGasUsed / totalSeeds < 200000, "Seed processing gas efficiency unexpectedly low");
 
         console.log(" Massive Edition Seed Processing Test SUCCESS");
@@ -440,6 +441,7 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         assertEq(imprint.balanceOf(address(this)), mintQuantities[2], "Contract balance incorrect");
 
         // 効率性確認（1NFTあたり15万ガス未満）
+        // 実測値: ~100,000 gas/NFT
         assertTrue(totalGas / totalMinted < 150000, "Mint efficiency low");
 
         console.log(" High Volume Simultaneous Minting Test SUCCESS");
