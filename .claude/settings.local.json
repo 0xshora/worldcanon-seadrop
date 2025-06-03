@@ -29,7 +29,8 @@
       "Bash(tree:*)",
       "Bash(yarn build)",
       "Bash(yarn lint:fix:format:*)",
-      "Bash(yarn test:*)"
+      "Bash(yarn test:*)",
+      "Bash(gh pr comment:*)"
     ]
   },
   "enableAllProjectMcpServers": false
