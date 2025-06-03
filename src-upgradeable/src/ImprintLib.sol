@@ -57,6 +57,7 @@ library ImprintStorage {
         /* --- Sale --- */
         uint64 activeEdition; // 現在販売中の Edition
         uint256 activeCursor; // その Edition 内で次に配布する seedId
+        mapping(uint64 => uint256) editionCursor; // Edition毎の次の配布位置を追跡
         mapping(uint64 => uint256) firstSeedId; // editionNo -> 先頭 seedId
         mapping(uint64 => uint256) lastSeedId; // editionNo -> 末尾 seedId
         mapping(uint64 => mapping(uint16 => bool)) localIndexTaken;
@@ -96,6 +97,7 @@ error NoSeeds();
 error MintingPaused();
 error NoActiveEdition();
 error SoldOut();
+error InvalidTimestamp();
 error TokenNonexistent();
 error DescriptorUnset();
 error DescriptorFail();
@@ -116,13 +118,25 @@ library ImprintLib {
     function createEditionWithEvent(uint64 editionNo, string calldata model)
         external
     {
+        // timestampを指定しない場合はblock.timestampを使用
+        _createEditionWithEvent(editionNo, model, uint64(block.timestamp));
+    }
+
+    function createEditionWithEvent(uint64 editionNo, string calldata model, uint64 timestamp)
+        external
+    {
+        // timestampを指定する場合はその値を使用
+        _createEditionWithEvent(editionNo, model, timestamp);
+    }
+
+    function _createEditionWithEvent(uint64 editionNo, string calldata model, uint64 timestamp) internal {
         if (editionNo == 0) revert InvalidEditionNo();
         if (bytes(model).length == 0) revert EmptyModel();
+        if (timestamp == 0) revert InvalidTimestamp();
 
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         if (st.editionHeaders[editionNo].editionNo != 0) revert EditionExists();
 
-        uint64 timestamp = uint64(block.timestamp);
         st.editionHeaders[editionNo] = ImprintStorage.EditionHeader({
             editionNo: editionNo,
             model: model,
@@ -159,7 +173,17 @@ library ImprintLib {
         if (st.firstSeedId[editionNo] == 0) revert NoSeeds();
 
         st.activeEdition = editionNo;
-        st.activeCursor = st.firstSeedId[editionNo];
+        
+        // 🔧 修正: Edition毎のカーソル位置を復元
+        uint256 savedCursor = st.editionCursor[editionNo];
+        if (savedCursor == 0) {
+            // 初回アクティブ化の場合は先頭から開始
+            st.activeCursor = st.firstSeedId[editionNo];
+            st.editionCursor[editionNo] = st.firstSeedId[editionNo];
+        } else {
+            // 復帰時は保存されたカーソル位置から再開
+            st.activeCursor = savedCursor;
+        }
 
         emit ActiveEditionChanged(editionNo);
     }
@@ -222,20 +246,33 @@ library ImprintLib {
         }
 
         st.activeCursor = cursor + quantity;
+        // 🔧 修正: Edition毎のカーソル位置も保存
+        st.editionCursor[ed] = cursor + quantity;
 
         return firstTokenId;
     }
 
     function createEdition(uint64 editionNo, string calldata model) external {
+        // timestampを指定しない場合はblock.timestampを使用
+        _createEdition(editionNo, model, uint64(block.timestamp));
+    }
+
+    function createEdition(uint64 editionNo, string calldata model, uint64 timestamp) external {
+        // timestampを指定する場合はその値を使用
+        _createEdition(editionNo, model, timestamp);
+    }
+
+    function _createEdition(uint64 editionNo, string calldata model, uint64 timestamp) internal {
         if (editionNo == 0) revert InvalidEditionNo();
         if (bytes(model).length == 0) revert EmptyModel();
+        if (timestamp == 0) revert InvalidTimestamp();
 
         ImprintStorage.Layout storage st = ImprintStorage.layout();
         if (st.editionHeaders[editionNo].editionNo != 0) revert EditionExists();
         st.editionHeaders[editionNo] = ImprintStorage.EditionHeader({
             editionNo: editionNo,
             model: model,
-            timestamp: uint64(block.timestamp),
+            timestamp: timestamp,
             isSealed: false
         });
     }
