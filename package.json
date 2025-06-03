@@ -9,8 +9,10 @@
   "scripts": {
     "build": "hardhat compile --config ./hardhat.config.ts",
     "clean": "hardhat clean; hardhat clean --config ./hardhat-coverage.config.ts; forge clean; rm -rf coverage coverage.json hh-cache hh-cache-coverage",
-    "test": "hardhat test --config ./hardhat.config.ts",
+    "test": "hardhat test test/ERC721*.spec.ts test/SeaDrop*.spec.ts --config ./hardhat.config.ts",
     "test:upgradeable": "hardhat test --config ./src-upgradeable/hardhat.config.ts",
+    "test:worldcanon": "echo 'WorldCanonE2E tests require both src/ and src-upgradeable/ compilation. Run manually with forge test.'",
+    "test:all": "yarn test && yarn test:upgradeable && yarn test:forge",
     "test:forge": "forge test -vvv",
     "profile": "REPORT_GAS=true hardhat test --config ./hardhat.config.ts",
     "coverage": "rm -rf temp-src-coverage; hardhat preprocess --dest temp-src-coverage; yarn coverage:hardhat:fix-lib-link; hardhat coverage --config ./hardhat-coverage.config.ts --solcoverjs ./config/.solcover.js; yarn lcov-convert-relative-paths-to-absolute",

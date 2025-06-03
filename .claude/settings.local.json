@@ -27,7 +27,9 @@
       "Bash(afplay:*)",
       "Bash(gh pr view:*)",
       "Bash(tree:*)",
-      "Bash(yarn build)"
+      "Bash(yarn build)",
+      "Bash(yarn lint:fix:format:*)",
+      "Bash(yarn test:*)"
     ]
   },
   "enableAllProjectMcpServers": false

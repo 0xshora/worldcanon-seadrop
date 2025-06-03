@@ -16,7 +16,7 @@ import type {
 
 /**
  * World Canon E2E Test Suite
- * 
+ *
  * 完全なライフサイクルテストをHardhat/TypeScriptで実装
  * Foundryテストとの重複を避けつつ、より複雑なシナリオをテスト
  */
@@ -85,17 +85,12 @@ describe(`World Canon E2E (v${VERSION})`, function () {
     // Deploy proxy
     const TransparentUpgradeableProxy = await ethers.getContractFactory(
       "TransparentUpgradeableProxy",
-      deployer,
+      deployer
     );
 
     const initData = imprintImpl.interface.encodeFunctionData(
       "initializeImprint",
-      [
-        "WorldCanonImprint",
-        "WCIMP",
-        [seadrop.address],
-        curator.address,
-      ],
+      ["WorldCanonImprint", "WCIMP", [seadrop.address], curator.address]
     );
 
     const proxy = await TransparentUpgradeableProxy.deploy(
@@ -110,14 +105,14 @@ describe(`World Canon E2E (v${VERSION})`, function () {
     // Deploy helper contracts
     const ImprintViews = await ethers.getContractFactory(
       "ImprintViews",
-      deployer,
+      deployer
     );
     imprintViews = await ImprintViews.deploy(imprint.address);
     await imprintViews.deployed();
 
     const ImprintDescriptor = await ethers.getContractFactory(
       "ImprintDescriptor",
-      deployer,
+      deployer
     );
     imprintDescriptor = await ImprintDescriptor.deploy(imprint.address);
     await imprintDescriptor.deployed();
@@ -134,7 +129,7 @@ describe(`World Canon E2E (v${VERSION})`, function () {
 
   /**
    * 🌍 Complete Marketplace Integration E2E Test
-   * 
+   *
    * Foundryでは困難な外部統合テストをTypeScriptで実装
    * - OpenSea互換性
    * - メタデータ標準準拠
@@ -145,9 +140,7 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       // Basic setup for marketplace tests
       await subject.connect(curator).mintInitial(initialSubjects);
 
-      await imprint
-        .connect(curator)
-        .setDescriptor(imprintDescriptor.address);
+      await imprint.connect(curator).setDescriptor(imprintDescriptor.address);
       await imprint.connect(curator).setMaxSupply(10000);
       await imprint.connect(curator).setWorldCanon(subject.address);
 
@@ -201,11 +194,9 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       // Decode and validate JSON structure
       const base64Data = imprintTokenURI.replace(
         "data:application/json;base64,",
-        "",
+        ""
       );
-      const jsonData = JSON.parse(
-        Buffer.from(base64Data, "base64").toString(),
-      );
+      const jsonData = JSON.parse(Buffer.from(base64Data, "base64").toString());
 
       expect(jsonData).to.have.property("name");
       expect(jsonData).to.have.property("description");
@@ -226,24 +217,30 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       const batchSize = 10;
       const mintPrice = ethers.utils.parseEther("0.01").mul(batchSize);
 
-      const gasEstimate = await seadrop.connect(collector1).estimateGas.mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        batchSize,
-        { value: mintPrice }
-      );
+      const gasEstimate = await seadrop
+        .connect(collector1)
+        .estimateGas.mintPublic(
+          imprint.address,
+          curator.address,
+          curator.address,
+          batchSize,
+          { value: mintPrice }
+        );
 
-      console.log(`Estimated gas for ${batchSize} mint: ${gasEstimate.toString()}`);
+      console.log(
+        `Estimated gas for ${batchSize} mint: ${gasEstimate.toString()}`
+      );
 
       // Execute batch mint
-      const tx = await seadrop.connect(collector1).mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        batchSize,
-        { value: mintPrice }
-      );
+      const tx = await seadrop
+        .connect(collector1)
+        .mintPublic(
+          imprint.address,
+          curator.address,
+          curator.address,
+          batchSize,
+          { value: mintPrice }
+        );
 
       const receipt = await tx.wait();
       console.log(`Actual gas used: ${receipt.gasUsed?.toString()}`);
@@ -258,7 +255,7 @@ describe(`World Canon E2E (v${VERSION})`, function () {
 
   /**
    * 💰 Revenue and Economics E2E Test
-   * 
+   *
    * 経済モデルと収益分配の包括的テスト
    */
   describe("💰 Revenue and Economics", function () {
@@ -270,13 +267,13 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       await imprint.connect(curator).setWorldCanon(subject.address);
 
       await imprint.connect(curator).createEdition(1, "GPT-4o");
-      
+
       const seeds = initialSubjects.slice(0, 5).map((name, index) => ({
         editionNo: 1,
         localIndex: index + 1,
         subjectId: index,
         subjectName: name,
-        desc: `Description for ${name}`
+        desc: `Description for ${name}`,
       }));
 
       await imprint.connect(curator).addSeeds(seeds);
@@ -289,12 +286,18 @@ describe(`World Canon E2E (v${VERSION})`, function () {
         endTime: Math.floor(Date.now() / 1000) + 86400,
         maxTotalMintableByWallet: 25,
         feeBps: 500, // 5% fee
-        restrictFeeRecipients: false
+        restrictFeeRecipients: false,
       };
 
-      await imprint.connect(curator).updatePublicDrop(seadrop.address, publicDrop);
-      await imprint.connect(curator).updateCreatorPayoutAddress(seadrop.address, curator.address);
-      await imprint.connect(curator).updateAllowedFeeRecipient(seadrop.address, curator.address, true);
+      await imprint
+        .connect(curator)
+        .updatePublicDrop(seadrop.address, publicDrop);
+      await imprint
+        .connect(curator)
+        .updateCreatorPayoutAddress(seadrop.address, curator.address);
+      await imprint
+        .connect(curator)
+        .updateAllowedFeeRecipient(seadrop.address, curator.address, true);
     });
 
     it("Should correctly distribute revenue with fees", async () => {
@@ -309,7 +312,9 @@ describe(`World Canon E2E (v${VERSION})`, function () {
 
       // Record initial balances
       const initialCuratorBalance = await curator.getBalance();
-      const initialSeaDropBalance = await ethers.provider.getBalance(seadrop.address);
+      const initialSeaDropBalance = await ethers.provider.getBalance(
+        seadrop.address
+      );
 
       // Execute mint with fee
       const tx = await seadrop.connect(collector1).mintPublic(
@@ -324,18 +329,31 @@ describe(`World Canon E2E (v${VERSION})`, function () {
 
       // Verify revenue distribution
       const finalCuratorBalance = await curator.getBalance();
-      const finalSeaDropBalance = await ethers.provider.getBalance(seadrop.address);
+      const finalSeaDropBalance = await ethers.provider.getBalance(
+        seadrop.address
+      );
 
       const curatorGain = finalCuratorBalance.sub(initialCuratorBalance);
       const seaDropGain = finalSeaDropBalance.sub(initialSeaDropBalance);
 
-      console.log(`Expected creator revenue: ${ethers.utils.formatEther(expectedCreatorRevenue)} ETH`);
-      console.log(`Actual curator gain: ${ethers.utils.formatEther(curatorGain)} ETH`);
+      console.log(
+        `Expected creator revenue: ${ethers.utils.formatEther(
+          expectedCreatorRevenue
+        )} ETH`
+      );
+      console.log(
+        `Actual curator gain: ${ethers.utils.formatEther(curatorGain)} ETH`
+      );
       console.log(`Expected fee: ${ethers.utils.formatEther(expectedFee)} ETH`);
-      console.log(`SeaDrop balance change: ${ethers.utils.formatEther(seaDropGain)} ETH`);
+      console.log(
+        `SeaDrop balance change: ${ethers.utils.formatEther(seaDropGain)} ETH`
+      );
 
       // Allow for small rounding differences
-      expect(curatorGain).to.be.closeTo(expectedCreatorRevenue, ethers.utils.parseEther("0.001"));
+      expect(curatorGain).to.be.closeTo(
+        expectedCreatorRevenue,
+        ethers.utils.parseEther("0.001")
+      );
 
       console.log("✅ Revenue distribution verified");
     });
@@ -348,26 +366,26 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       const mintPrice = ethers.utils.parseEther("0.1");
 
       // Collector1 mints all available
-      await seadrop.connect(collector1).mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        maxMintable,
-        { value: mintPrice.mul(maxMintable) }
-      );
+      await seadrop
+        .connect(collector1)
+        .mintPublic(
+          imprint.address,
+          curator.address,
+          curator.address,
+          maxMintable,
+          { value: mintPrice.mul(maxMintable) }
+        );
 
       expect(await imprint.totalSupply()).to.equal(maxMintable);
       expect(await imprintViews.remainingInEdition(1)).to.equal(0);
 
       // Collector2 tries to mint (should fail)
       await expect(
-        seadrop.connect(collector2).mintPublic(
-          imprint.address,
-          curator.address,
-          curator.address,
-          1,
-          { value: mintPrice }
-        )
+        seadrop
+          .connect(collector2)
+          .mintPublic(imprint.address, curator.address, curator.address, 1, {
+            value: mintPrice,
+          })
       ).to.be.revertedWith("SoldOut");
 
       console.log("✅ Sold out scenario handled correctly");
@@ -376,7 +394,7 @@ describe(`World Canon E2E (v${VERSION})`, function () {
 
   /**
    * 🔄 Temporal Evolution E2E Test
-   * 
+   *
    * 時間経過による進化とEdition切替のテスト
    */
   describe("🔄 Temporal Evolution", function () {
@@ -392,13 +410,13 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       // Generation 1: GPT-4o Era
       console.log("📅 Era 1: GPT-4o Generation");
       await imprint.connect(curator).createEdition(1, "GPT-4o");
-      
+
       const gptSeeds = initialSubjects.slice(0, 3).map((name, index) => ({
         editionNo: 1,
         localIndex: index + 1,
         subjectId: index,
         subjectName: name,
-        desc: `GPT-4o interpretation: ${name} represents the fundamental human quest for meaning.`
+        desc: `GPT-4o interpretation: ${name} represents the fundamental human quest for meaning.`,
       }));
 
       await imprint.connect(curator).addSeeds(gptSeeds);
@@ -412,20 +430,22 @@ describe(`World Canon E2E (v${VERSION})`, function () {
         endTime: Math.floor(Date.now() / 1000) + 86400,
         maxTotalMintableByWallet: 25,
         feeBps: 250,
-        restrictFeeRecipients: false
+        restrictFeeRecipients: false,
       };
 
-      await imprint.connect(curator).updatePublicDrop(seadrop.address, publicDrop);
-      await imprint.connect(curator).updateCreatorPayoutAddress(seadrop.address, curator.address);
+      await imprint
+        .connect(curator)
+        .updatePublicDrop(seadrop.address, publicDrop);
+      await imprint
+        .connect(curator)
+        .updateCreatorPayoutAddress(seadrop.address, curator.address);
 
       // Mint from GPT-4o generation
-      await seadrop.connect(collector1).mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        2,
-        { value: ethers.utils.parseEther("0.02") }
-      );
+      await seadrop
+        .connect(collector1)
+        .mintPublic(imprint.address, curator.address, curator.address, 2, {
+          value: ethers.utils.parseEther("0.02"),
+        });
 
       expect(await imprint.totalSupply()).to.equal(2);
 
@@ -436,13 +456,13 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       // Generation 2: Claude-3.7 Era
       console.log("📅 Era 2: Claude-3.7 Generation");
       await imprint.connect(curator).createEdition(2, "Claude-3.7");
-      
+
       const claudeSeeds = initialSubjects.slice(0, 3).map((name, index) => ({
         editionNo: 2,
         localIndex: index + 1,
         subjectId: index,
         subjectName: name,
-        desc: `Claude-3.7 interpretation: ${name} embodies the constitutional principles of beneficial AI alignment.`
+        desc: `Claude-3.7 interpretation: ${name} embodies the constitutional principles of beneficial AI alignment.`,
       }));
 
       await imprint.connect(curator).addSeeds(claudeSeeds);
@@ -450,13 +470,11 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       await imprint.connect(curator).setActiveEdition(2);
 
       // Mint from Claude-3.7 generation
-      await seadrop.connect(collector2).mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        2,
-        { value: ethers.utils.parseEther("0.02") }
-      );
+      await seadrop
+        .connect(collector2)
+        .mintPublic(imprint.address, curator.address, curator.address, 2, {
+          value: ethers.utils.parseEther("0.02"),
+        });
 
       expect(await imprint.totalSupply()).to.equal(4);
 
@@ -466,13 +484,13 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       await network.provider.send("evm_mine");
 
       await imprint.connect(curator).createEdition(3, "NextGen-AI-2026");
-      
+
       const futureSeeds = initialSubjects.slice(0, 3).map((name, index) => ({
         editionNo: 3,
         localIndex: index + 1,
         subjectId: index,
         subjectName: name,
-        desc: `NextGen-AI-2026 interpretation: ${name} transcends current paradigms of understanding.`
+        desc: `NextGen-AI-2026 interpretation: ${name} transcends current paradigms of understanding.`,
       }));
 
       await imprint.connect(curator).addSeeds(futureSeeds);
@@ -480,13 +498,11 @@ describe(`World Canon E2E (v${VERSION})`, function () {
       await imprint.connect(curator).setActiveEdition(3);
 
       // Mint from future generation
-      await seadrop.connect(collector3).mintPublic(
-        imprint.address,
-        curator.address,
-        curator.address,
-        1,
-        { value: ethers.utils.parseEther("0.01") }
-      );
+      await seadrop
+        .connect(collector3)
+        .mintPublic(imprint.address, curator.address, curator.address, 1, {
+          value: ethers.utils.parseEther("0.01"),
+        });
 
       expect(await imprint.totalSupply()).to.equal(5);
 
