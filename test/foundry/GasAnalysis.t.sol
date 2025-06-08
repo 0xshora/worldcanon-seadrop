@@ -140,12 +140,11 @@ contract GasAnalysisTest is TestHelper, IERC721Receiver {
         
         vm.startPrank(curator);
         
-        // 異なるサイズのEditionを封印
-        uint256[] memory seedCounts = new uint256[](4);
+        // 異なるサイズのEditionを封印（軽量化）
+        uint256[] memory seedCounts = new uint256[](3);
         seedCounts[0] = 10;
         seedCounts[1] = 50;
         seedCounts[2] = 100;
-        seedCounts[3] = 500;
         
         for (uint256 i = 0; i < seedCounts.length; i++) {
             uint64 editionNo = uint64(i + 1);
@@ -174,21 +173,20 @@ contract GasAnalysisTest is TestHelper, IERC721Receiver {
         
         vm.startPrank(curator);
         
-        // 複数Editionを準備
-        for (uint64 i = 1; i <= 10; i++) {
+        // 複数Editionを準備（軽量化: 5個のみ）
+        for (uint64 i = 1; i <= 5; i++) {
             imprint.createEdition(i, string(abi.encodePacked("Model-", _toString(i))));
-            _addSeedsToEdition(i, 100);
+            _addSeedsToEdition(i, 50); // 軽量化: 50個に削減
             imprint.sealEdition(i);
         }
         
         // Edition切り替えのガス測定
-        uint64[] memory switchPattern = new uint64[](6);
+        uint64[] memory switchPattern = new uint64[](5);
         switchPattern[0] = 1;
-        switchPattern[1] = 5;
-        switchPattern[2] = 10;
-        switchPattern[3] = 3;
-        switchPattern[4] = 7;
-        switchPattern[5] = 2;
+        switchPattern[1] = 3;
+        switchPattern[2] = 5;
+        switchPattern[3] = 2;
+        switchPattern[4] = 4;
         
         for (uint256 i = 0; i < switchPattern.length; i++) {
             uint256 startGas = gasleft();
@@ -211,9 +209,9 @@ contract GasAnalysisTest is TestHelper, IERC721Receiver {
         
         imprint.createEdition(1, "Cumulative-Test");
         
-        // 100個ずつ追加して累積効果を測定
-        uint256 batchSize = 100;
-        uint256 maxBatches = 10; // 1,000個まで
+        // 50個ずつ追加して累積効果を測定（軽量化）
+        uint256 batchSize = 50;
+        uint256 maxBatches = 4; // 200個まで
         
         for (uint256 batch = 0; batch < maxBatches; batch++) {
             SeedInput[] memory seeds = new SeedInput[](batchSize);

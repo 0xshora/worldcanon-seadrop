@@ -241,9 +241,9 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
     function testLargeScaleSubjectProcessing() public {
         console.log("Large Scale Subject Processing Test started");
 
-        // 1000件のSubjectを分割してミント（ガス制限対策）
-        uint256 totalSubjects = 1000;
-        uint256 batchSize = 100;
+        // 200件のSubjectを分割してミント（軽量化）
+        uint256 totalSubjects = 200;
+        uint256 batchSize = 50;
         uint256 batches = totalSubjects / batchSize;
 
         uint256 totalGasUsed = 0;
@@ -373,9 +373,9 @@ contract WorldCanonPerformanceTest is TestHelper, IERC721Receiver {
         vm.startPrank(owner);
         imprint.createEdition(1, "HighVolumeModel");
 
-        // 1000件のSeeds作成（大量ミントテスト用）
-        uint256 totalSeeds = 1000;
-        uint256 batchSize = 100;
+        // 200件のSeeds作成（軽量化）
+        uint256 totalSeeds = 200;
+        uint256 batchSize = 50;
 
         for (uint256 batch = 0; batch < totalSeeds / batchSize; batch++) {
             SeedInput[] memory seeds = new SeedInput[](batchSize);

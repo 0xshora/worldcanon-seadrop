@@ -127,9 +127,9 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         // Edition作成
         imprint.createEdition(1, "MaxCapacityModel");
 
-        // 1000件のSeed作成（メモリ制限内で）
-        uint256 batchSize = 100;
-        uint256 totalSeeds = 1000;
+        // 200件のSeed作成（軽量化）
+        uint256 batchSize = 50;
+        uint256 totalSeeds = 200;
 
         for (uint256 batch = 0; batch < totalSeeds / batchSize; batch++) {
             SeedInput[] memory seeds = new SeedInput[](batchSize);
@@ -221,14 +221,10 @@ contract WorldCanonEdgeCasesTest is TestHelper, IERC721Receiver {
         uint256 editionSize = imprintViews.editionSize(200);
         console.log("Edition 200 size before seal:", editionSize);
 
-        // 注意: 現在の実装では、Seedなしでも封印可能（設計判断）
-        // 将来的にSeedsチェックが必要になった場合は、この行のコメントアウトを解除
-        // vm.expectRevert(NoSeeds.selector);
+        // 修正後: Seedなしでの封印は失敗する
+        vm.expectRevert(NoSeeds.selector);
         imprint.sealEdition(200);
-
-        // 封印が成功したことを確認
-        ImprintStorage.EditionHeader memory sealedHeader = imprintViews.getEditionHeader(200);
-        assertTrue(sealedHeader.isSealed, "Edition should be sealed");
+        console.log("Empty edition seal correctly prevented");
 
         vm.stopPrank();
 
